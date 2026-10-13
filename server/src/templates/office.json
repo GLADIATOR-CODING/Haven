@@ -1,0 +1,74 @@
+{
+  "templateKey": "office",
+  "name": "Corporate Office",
+  "description": "Designed for tech parks, startups, and enterprise workplaces.",
+  "categories": [
+    {
+      "key": "laptops_devices",
+      "label": "Laptops & Tech Accessories",
+      "icon": "laptop",
+      "keywords": ["laptop", "macbook", "charger", "mouse", "keyboard", "adapter", "dock", "monitor"],
+      "sensitive": false,
+      "autoApproveClaims": false,
+      "verificationPrompts": [
+        { "key": "stickers_model", "label": "Model details, stickers, or case color", "kind": "text", "required": true },
+        { "key": "asset_tag", "label": "Company IT asset tag or serial number", "kind": "secret", "required": false }
+      ]
+    },
+    {
+      "key": "access_card",
+      "label": "Access Cards & Keys",
+      "icon": "id-card",
+      "keywords": ["badge", "access card", "keycard", "lanyard", "office key"],
+      "sensitive": true,
+      "autoApproveClaims": false,
+      "verificationPrompts": [
+        { "key": "name_emp_id", "label": "Employee ID or name printed on badge", "kind": "secret", "required": true }
+      ]
+    },
+    {
+      "key": "headphones",
+      "label": "Headphones & Audio",
+      "icon": "headphones",
+      "keywords": ["headphones", "airpods", "earbuds", "headset"],
+      "sensitive": false,
+      "autoApproveClaims": false,
+      "verificationPrompts": [
+        { "key": "brand_case", "label": "Brand, color, or protective case details", "kind": "text", "required": true }
+      ]
+    },
+    {
+      "key": "bottles_lunchboxes",
+      "label": "Bottles & Lunchboxes",
+      "icon": "cup-soda",
+      "keywords": ["bottle", "tumbler", "sipper", "lunchbox", "tiffin"],
+      "sensitive": false,
+      "autoApproveClaims": true,
+      "verificationPrompts": [
+        { "key": "brand_color", "label": "Brand and color", "kind": "text", "required": true }
+      ]
+    },
+    {
+      "key": "other",
+      "label": "Other Items",
+      "icon": "package",
+      "keywords": ["misc", "other"],
+      "sensitive": false,
+      "autoApproveClaims": false,
+      "verificationPrompts": [
+        { "key": "item_description", "label": "Distinguishing features", "kind": "text", "required": true }
+      ]
+    }
+  ],
+  "locations": [
+    { "key": "reception", "label": "Front Reception", "zone": "lobby" },
+    { "key": "meeting_rooms", "label": "Conference & Meeting Rooms", "zone": "work" },
+    { "key": "cafeteria", "label": "Pantry & Cafeteria", "zone": "commons" },
+    { "key": "floor_1", "label": "Floor 1 Open Workspace", "zone": "work" },
+    { "key": "floor_2", "label": "Floor 2 Open Workspace", "zone": "work" },
+    { "key": "parking", "label": "Basement Parking", "zone": "parking" }
+  ],
+  "claimPolicy": { "minMatchingDetails": 1, "maxAttempts": 3 },
+  "matchSensitivity": "balanced",
+  "handoverInstructions": "Main Reception Desk, Ground Floor, 9:00 AM - 6:00 PM on business days."
+}

@@ -1,0 +1,72 @@
+{
+  "templateKey": "event",
+  "name": "Event / Conference / Fest",
+  "description": "Optimized for concerts, hackathons, conferences, and festivals.",
+  "categories": [
+    {
+      "key": "electronics",
+      "label": "Phones & Devices",
+      "icon": "smartphone",
+      "keywords": ["phone", "mobile", "powerbank", "camera", "smartwatch"],
+      "sensitive": false,
+      "autoApproveClaims": false,
+      "verificationPrompts": [
+        { "key": "lock_screen", "label": "Lock screen or case details", "kind": "text", "required": true }
+      ]
+    },
+    {
+      "key": "wallet",
+      "label": "Wallets & Cards",
+      "icon": "credit-card",
+      "keywords": ["wallet", "purse", "card", "id", "pass"],
+      "sensitive": true,
+      "autoApproveClaims": false,
+      "verificationPrompts": [
+        { "key": "name_cards", "label": "Name or specific cards inside", "kind": "secret", "required": true }
+      ]
+    },
+    {
+      "key": "bags",
+      "label": "Bags & Backpacks",
+      "icon": "briefcase",
+      "keywords": ["bag", "backpack", "totebag"],
+      "sensitive": false,
+      "autoApproveClaims": false,
+      "verificationPrompts": [
+        { "key": "bag_contents", "label": "Contents inside the bag", "kind": "text", "required": true }
+      ]
+    },
+    {
+      "key": "clothing",
+      "label": "Jackets & Merchandise",
+      "icon": "shirt",
+      "keywords": ["jacket", "hoodie", "cap", "sunglasses", "merch"],
+      "sensitive": false,
+      "autoApproveClaims": true,
+      "verificationPrompts": [
+        { "key": "item_desc", "label": "Brand, color, size", "kind": "text", "required": true }
+      ]
+    },
+    {
+      "key": "other",
+      "label": "Other Items",
+      "icon": "package",
+      "keywords": ["misc", "other"],
+      "sensitive": false,
+      "autoApproveClaims": false,
+      "verificationPrompts": [
+        { "key": "item_desc", "label": "Description of the item", "kind": "text", "required": true }
+      ]
+    }
+  ],
+  "locations": [
+    { "key": "entry_gate", "label": "Main Entry & Registration", "zone": "entry" },
+    { "key": "main_hall", "label": "Main Stage / Auditorium", "zone": "hall" },
+    { "key": "food_court", "label": "Food Court & Stalls", "zone": "dining" },
+    { "key": "parking", "label": "Parking Ground", "zone": "parking" },
+    { "key": "restrooms", "label": "Restrooms Area", "zone": "amenities" }
+  ],
+  "claimPolicy": { "minMatchingDetails": 1, "maxAttempts": 3 },
+  "matchSensitivity": "lenient",
+  "handoverInstructions": "Event Helpdesk / Info Booth near the Main Entrance."
+}

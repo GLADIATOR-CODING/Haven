@@ -1,0 +1,108 @@
+{
+  "templateKey": "campus",
+  "name": "Campus",
+  "description": "Ideal for universities, colleges, and schools.",
+  "categories": [
+    {
+      "key": "electronics",
+      "label": "Phone & Electronics",
+      "icon": "smartphone",
+      "keywords": ["phone", "mobile", "iphone", "samsung", "laptop", "airpods", "earphones", "ipad", "tablet", "charger"],
+      "sensitive": false,
+      "autoApproveClaims": false,
+      "verificationPrompts": [
+        { "key": "lock_screen", "label": "Lock screen wallpaper or case color/design", "kind": "text", "required": true },
+        { "key": "passcode_hint", "label": "Device serial number / IMEI / specific identifier", "kind": "secret", "required": false }
+      ]
+    },
+    {
+      "key": "id_card",
+      "label": "ID Card & Documents",
+      "icon": "credit-card",
+      "keywords": ["id", "identity", "card", "student id", "library card", "badge", "license", "aadhaar", "pan"],
+      "sensitive": true,
+      "autoApproveClaims": false,
+      "verificationPrompts": [
+        { "key": "full_name", "label": "Full name printed on the card", "kind": "text", "required": true },
+        { "key": "id_number", "label": "Exact ID / roll number on card", "kind": "secret", "required": true }
+      ]
+    },
+    {
+      "key": "wallet_bags",
+      "label": "Wallet & Bags",
+      "icon": "briefcase",
+      "keywords": ["wallet", "purse", "backpack", "bag", "pouch", "tote"],
+      "sensitive": true,
+      "autoApproveClaims": false,
+      "verificationPrompts": [
+        { "key": "inner_contents", "label": "List 2 or 3 specific items inside the bag/wallet", "kind": "text", "required": true }
+      ]
+    },
+    {
+      "key": "keys",
+      "label": "Keys & Access Cards",
+      "icon": "key",
+      "keywords": ["key", "keys", "keychain", "fob", "tag"],
+      "sensitive": false,
+      "autoApproveClaims": false,
+      "verificationPrompts": [
+        { "key": "keychain_details", "label": "Describe the keychain or number of keys", "kind": "text", "required": true }
+      ]
+    },
+    {
+      "key": "bottles_umbrellas",
+      "label": "Bottles & Umbrellas",
+      "icon": "cup-soda",
+      "keywords": ["bottle", "water bottle", "flask", "sipper", "umbrella"],
+      "sensitive": false,
+      "autoApproveClaims": true,
+      "verificationPrompts": [
+        { "key": "brand_stickers", "label": "Brand, color shade, or any stickers/markings", "kind": "text", "required": true }
+      ]
+    },
+    {
+      "key": "clothing",
+      "label": "Clothing & Accessories",
+      "icon": "shirt",
+      "keywords": ["jacket", "hoodie", "cap", "sweater", "scarf", "glasses", "sunglasses", "watch"],
+      "sensitive": false,
+      "autoApproveClaims": false,
+      "verificationPrompts": [
+        { "key": "size_details", "label": "Size tag, brand name, or distinguishing marks", "kind": "text", "required": true }
+      ]
+    },
+    {
+      "key": "books",
+      "label": "Books & Notebooks",
+      "icon": "book-open",
+      "keywords": ["book", "notebook", "textbook", "binder", "notes", "diary"],
+      "sensitive": false,
+      "autoApproveClaims": false,
+      "verificationPrompts": [
+        { "key": "title_name", "label": "Title of the book or name written inside", "kind": "text", "required": true }
+      ]
+    },
+    {
+      "key": "other",
+      "label": "Other Items",
+      "icon": "package",
+      "keywords": ["item", "misc", "other"],
+      "sensitive": false,
+      "autoApproveClaims": false,
+      "verificationPrompts": [
+        { "key": "unique_details", "label": "Distinctive detail or proof of ownership", "kind": "text", "required": true }
+      ]
+    }
+  ],
+  "locations": [
+    { "key": "library", "label": "Central Library", "zone": "central" },
+    { "key": "cafeteria", "label": "Main Cafeteria", "zone": "central" },
+    { "key": "main_gate", "label": "Main Gate / Security", "zone": "entry" },
+    { "key": "block_a", "label": "Academic Block A", "zone": "academic" },
+    { "key": "block_b", "label": "Academic Block B", "zone": "academic" },
+    { "key": "sports_complex", "label": "Sports Complex & Gym", "zone": "sports" }
+  ],
+  "claimPolicy": { "minMatchingDetails": 1, "maxAttempts": 3 },
+  "matchSensitivity": "balanced",
+  "handoverInstructions": "Main Campus Security Desk (Gate 1), 9:00 AM - 6:00 PM on weekdays."
+}

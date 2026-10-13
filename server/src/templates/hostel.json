@@ -1,0 +1,73 @@
+{
+  "templateKey": "hostel",
+  "name": "Hostel / Dormitory",
+  "description": "Tailored for student dormitories, hostels, and residential blocks.",
+  "categories": [
+    {
+      "key": "electronics",
+      "label": "Phones & Chargers",
+      "icon": "smartphone",
+      "keywords": ["phone", "charger", "adapter", "powerbank", "cable", "earphones", "laptop"],
+      "sensitive": false,
+      "autoApproveClaims": false,
+      "verificationPrompts": [
+        { "key": "device_color", "label": "Brand, model, or cable color/markings", "kind": "text", "required": true }
+      ]
+    },
+    {
+      "key": "id_keys",
+      "label": "Room Keys & ID Badge",
+      "icon": "key",
+      "keywords": ["key", "room key", "id", "badge", "hostel card"],
+      "sensitive": true,
+      "autoApproveClaims": false,
+      "verificationPrompts": [
+        { "key": "room_number", "label": "Room number / tag on key", "kind": "secret", "required": true }
+      ]
+    },
+    {
+      "key": "laundry_clothing",
+      "label": "Clothing & Laundry",
+      "icon": "shirt",
+      "keywords": ["tshirt", "pants", "jacket", "towel", "laundry", "socks", "shoes"],
+      "sensitive": false,
+      "autoApproveClaims": true,
+      "verificationPrompts": [
+        { "key": "brand_size", "label": "Brand, size, or pattern details", "kind": "text", "required": true }
+      ]
+    },
+    {
+      "key": "bottles",
+      "label": "Bottles & Mugs",
+      "icon": "cup-soda",
+      "keywords": ["bottle", "mug", "flask", "cup"],
+      "sensitive": false,
+      "autoApproveClaims": true,
+      "verificationPrompts": [
+        { "key": "color_markings", "label": "Color, brand, or sticker description", "kind": "text", "required": true }
+      ]
+    },
+    {
+      "key": "other",
+      "label": "Other Items",
+      "icon": "package",
+      "keywords": ["misc", "other"],
+      "sensitive": false,
+      "autoApproveClaims": false,
+      "verificationPrompts": [
+        { "key": "item_details", "label": "Describe distinguishing features", "kind": "text", "required": true }
+      ]
+    }
+  ],
+  "locations": [
+    { "key": "reception", "label": "Hostel Reception & Warden Office", "zone": "ground" },
+    { "key": "common_room", "label": "Common Room / TV Hall", "zone": "ground" },
+    { "key": "mess", "label": "Dining Mess", "zone": "dining" },
+    { "key": "laundry", "label": "Laundry Area", "zone": "utility" },
+    { "key": "floor_1", "label": "1st Floor Corridor", "zone": "residential" },
+    { "key": "floor_2", "label": "2nd Floor Corridor", "zone": "residential" }
+  ],
+  "claimPolicy": { "minMatchingDetails": 1, "maxAttempts": 3 },
+  "matchSensitivity": "balanced",
+  "handoverInstructions": "Hostel Warden Office / Reception Desk, available 8:00 AM - 10:00 PM."
+}

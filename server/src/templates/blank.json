@@ -1,0 +1,24 @@
+{
+  "templateKey": "blank",
+  "name": "Blank / Custom",
+  "description": "Start with a clean slate and configure all categories and locations.",
+  "categories": [
+    {
+      "key": "general",
+      "label": "General Items",
+      "icon": "package",
+      "keywords": ["item", "general", "misc", "lost"],
+      "sensitive": false,
+      "autoApproveClaims": false,
+      "verificationPrompts": [
+        { "key": "ownership_proof", "label": "Describe unique features or proof of ownership", "kind": "text", "required": true }
+      ]
+    }
+  ],
+  "locations": [
+    { "key": "main_desk", "label": "Main Front Desk", "zone": "main" }
+  ],
+  "claimPolicy": { "minMatchingDetails": 1, "maxAttempts": 3 },
+  "matchSensitivity": "balanced",
+  "handoverInstructions": "Front Desk / Administration Office."
+}
