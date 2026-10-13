@@ -67,6 +67,20 @@ export function AuthProvider({ children }) {
     },
   });
 
+  const demoLoginMutation = useMutation({
+    mutationFn: (demoParams) => api.post('/api/auth/demo-login', demoParams),
+    onSuccess: (data) => {
+      queryClient.setQueryData(['authMe'], data);
+      if (data.activeOrgSlug) {
+        selectOrgSlug(data.activeOrgSlug);
+      }
+      refetchMe();
+      queryClient.invalidateQueries({ queryKey: ['orgConfig'] });
+      queryClient.invalidateQueries({ queryKey: ['myReports'] });
+      queryClient.invalidateQueries({ queryKey: ['foundFeed'] });
+    },
+  });
+
   const logoutMutation = useMutation({
     mutationFn: () => api.post('/api/auth/logout'),
     onSuccess: () => {
@@ -83,6 +97,7 @@ export function AuthProvider({ children }) {
     selectOrgSlug,
     isLoading,
     login: loginMutation.mutateAsync,
+    demoLogin: demoLoginMutation.mutateAsync,
     signup: signupMutation.mutateAsync,
     logout: logoutMutation.mutateAsync,
     refetchMe,

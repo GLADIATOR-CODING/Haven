@@ -83,3 +83,31 @@ export async function getMe(userId) {
     })),
   };
 }
+
+export async function demoLogin({ role = 'member', orgSlug = 'demo-campus' }) {
+  let demoEmail;
+  if (role === 'admin') {
+    demoEmail = 'admin@haven.local';
+  } else if (role === 'moderator') {
+    demoEmail = 'mod@haven.local';
+  } else {
+    demoEmail = 'alex@haven.local';
+  }
+
+  const user = await User.findOne({ email: demoEmail });
+  if (!user) {
+    throw new ApiError(404, 'DEMO_USER_NOT_FOUND', `Demo user for role ${role} not found.`);
+  }
+
+  const token = signToken({ id: user._id, email: user.email });
+  const profile = await getMe(user._id);
+
+  const normalizedSlug =
+    orgSlug === 'campus' ? 'demo-campus' : orgSlug === 'office' ? 'demo-office' : orgSlug;
+
+  return {
+    ...profile,
+    token,
+    activeOrgSlug: normalizedSlug,
+  };
+}

@@ -332,9 +332,9 @@ export default function ReportFoundPage() {
                 A clear picture helps the owner identify their property quickly.
               </p>
             </div>
-            <span className="hidden sm:inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 px-2 py-0.5 rounded border border-emerald-200/60 dark:border-emerald-800/40">
+            <span className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 px-2 py-0.5 rounded border border-emerald-200/60 dark:border-emerald-800/40">
               <ShieldCheck className="w-3.5 h-3.5" />
-              <span>EXIF GPS Removed</span>
+              <span>EXIF GPS Stripped</span>
             </span>
           </div>
 

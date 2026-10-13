@@ -27,3 +27,9 @@ export const me = asyncHandler(async (req, res) => {
   const profile = await authService.getMe(req.user._id);
   res.status(200).json(profile);
 });
+
+export const demoLogin = asyncHandler(async (req, res) => {
+  const result = await authService.demoLogin(req.body);
+  res.cookie('haven_token', result.token, getCookieOptions());
+  res.status(200).json(result);
+});

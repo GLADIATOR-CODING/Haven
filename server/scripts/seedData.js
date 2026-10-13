@@ -87,6 +87,7 @@ export async function seedInternal() {
     { userId: member2._id, orgId: campusOrg._id, role: 'member' },
 
     { userId: adminUser._id, orgId: officeOrg._id, role: 'admin' },
+    { userId: modUser._id, orgId: officeOrg._id, role: 'moderator' },
     { userId: member1._id, orgId: officeOrg._id, role: 'member' },
   ]);
 

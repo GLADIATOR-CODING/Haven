@@ -17,15 +17,17 @@ import {
 
 export default function OrgHomePage() {
   const { slug } = useParams();
-  const { user } = useAuth();
+  const { user, demoLogin } = useAuth();
   const [activeTab, setActiveTab] = useState('feed');
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [switchingRole, setSwitchingRole] = useState(false);
 
   const {
     data: orgData,
     isLoading: orgLoading,
     isError: orgError,
+    refetch: refetchOrg,
   } = useQuery({
     queryKey: ['orgConfig', slug],
     queryFn: () => api.get(`/api/o/${slug}`),
@@ -65,7 +67,7 @@ export default function OrgHomePage() {
     );
   }
 
-  if (orgError) {
+  if (orgError || !orgData?.org) {
     return (
       <div className="max-w-md mx-auto px-4 py-20 text-center">
         <div className="p-6 rounded-md bg-[var(--bg-card)] border border-[var(--border-subtle)] space-y-3">
@@ -84,12 +86,77 @@ export default function OrgHomePage() {
     );
   }
 
-  const { org, currentRole } = orgData;
+  const { org, currentRole = 'member' } = orgData;
   const foundItems = feedData?.reports || [];
   const myReports = myData?.reports || [];
+  const isDemoOrg = org?.slug?.startsWith('demo-') || ['campus', 'office', 'demo-campus', 'demo-office'].includes(slug);
+
+  const handleSwitchDemoRole = async (targetRole) => {
+    setSwitchingRole(true);
+    try {
+      await demoLogin({ role: targetRole, orgSlug: org.slug });
+      await refetchOrg();
+    } catch (err) {
+      console.error('Role switch failed', err);
+    } finally {
+      setSwitchingRole(false);
+    }
+  };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-6">
+      {/* Quick Demo Role Switcher for Evaluators */}
+      {isDemoOrg && (
+        <div className="p-3.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] flex flex-wrap items-center justify-between gap-3 shadow-xs">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-xs font-bold text-[var(--text-primary)]">
+              Demo Workspace Mode
+            </span>
+            <span className="text-xs text-[var(--text-secondary)] hidden sm:inline">
+              · 1-click role testing for evaluators
+            </span>
+          </div>
+
+          <div className="flex items-center gap-1.5 text-xs">
+            <span className="text-[11px] font-mono text-[var(--text-muted)] mr-1">Switch Role:</span>
+            <button
+              onClick={() => handleSwitchDemoRole('member')}
+              disabled={switchingRole || currentRole === 'member'}
+              className={`px-3 py-1 rounded-md font-semibold transition-colors border ${
+                currentRole === 'member'
+                  ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 border-transparent shadow-xs'
+                  : 'bg-[var(--bg-card)] text-[var(--text-primary)] border-[var(--border-subtle)] hover:border-[var(--border-strong)]'
+              }`}
+            >
+              Member (Alex)
+            </button>
+            <button
+              onClick={() => handleSwitchDemoRole('moderator')}
+              disabled={switchingRole || currentRole === 'moderator'}
+              className={`px-3 py-1 rounded-md font-semibold transition-colors border ${
+                currentRole === 'moderator'
+                  ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 border-transparent shadow-xs'
+                  : 'bg-[var(--bg-card)] text-[var(--text-primary)] border-[var(--border-subtle)] hover:border-[var(--border-strong)]'
+              }`}
+            >
+              Moderator (Desk)
+            </button>
+            <button
+              onClick={() => handleSwitchDemoRole('admin')}
+              disabled={switchingRole || currentRole === 'admin'}
+              className={`px-3 py-1 rounded-md font-semibold transition-colors border ${
+                currentRole === 'admin'
+                  ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 border-transparent shadow-xs'
+                  : 'bg-[var(--bg-card)] text-[var(--text-primary)] border-[var(--border-subtle)] hover:border-[var(--border-strong)]'
+              }`}
+            >
+              Admin (Campus Admin)
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Workspace Header Overview Card */}
       <div className="border border-[var(--border-subtle)] bg-[var(--bg-card)] rounded-xl p-6 sm:p-7 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-5">
         <div className="space-y-2">

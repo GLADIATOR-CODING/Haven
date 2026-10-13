@@ -48,8 +48,8 @@ export default function Navbar() {
   const currentPath = location.pathname;
 
   return (
-    <header className="sticky top-3 sm:top-5 z-50 px-4 sm:px-6 pointer-events-none">
-      <div className="max-w-4xl mx-auto pointer-events-auto rounded-full bg-black/90 dark:bg-black/95 text-white border border-neutral-800/80 shadow-[0_12px_40px_rgba(0,0,0,0.6)] backdrop-blur-xl px-4 sm:px-5 h-14 flex items-center justify-between gap-4 transition-all">
+    <header className="sticky top-2 sm:top-5 z-50 px-3 sm:px-6 pointer-events-none">
+      <div className="max-w-4xl mx-auto pointer-events-auto rounded-full bg-black/90 dark:bg-black/95 text-white border border-neutral-800/80 shadow-[0_12px_40px_rgba(0,0,0,0.6)] backdrop-blur-xl px-3.5 sm:px-5 h-12 sm:h-14 flex items-center justify-between gap-2.5 sm:gap-4 transition-all">
         {/* Left: Brand & Workspace Selector */}
         <div className="flex items-center gap-3 flex-shrink-0">
           <Link to="/" className="flex items-center gap-2.5 group">
@@ -97,7 +97,7 @@ export default function Navbar() {
                         >
                           <div className="truncate pr-2">
                             <div className="truncate">{m.orgName}</div>
-                            <div className="text-[10px] text-neutral-500">
+                            <div className="text-[10px] text-neutral-400">
                               /{m.orgSlug} · {m.role}
                             </div>
                           </div>
@@ -114,7 +114,7 @@ export default function Navbar() {
                       className="px-3 py-1.5 rounded-xl text-xs font-medium text-white hover:bg-[#1a1a1a] flex items-center gap-2"
                     >
                       <Plus className="w-3.5 h-3.5 text-red-500" />
-                      <span>Create New Workspace</span>
+                      <span>Create Workspace</span>
                     </Link>
                     <Link
                       to="/join"
@@ -122,7 +122,7 @@ export default function Navbar() {
                       className="px-3 py-1.5 rounded-xl text-xs font-medium text-neutral-300 hover:bg-[#1a1a1a] flex items-center gap-2"
                     >
                       <KeyRound className="w-3.5 h-3.5" />
-                      <span>Join with Access Code</span>
+                      <span>Join Workspace</span>
                     </Link>
                   </div>
                 </div>
@@ -173,43 +173,28 @@ export default function Navbar() {
               </Link>
             </>
           ) : (
-            <>
-              <Link
-                to="/join"
-                className={`transition-colors flex items-center gap-1.5 ${
-                  currentPath.startsWith('/join')
-                    ? 'text-white font-semibold'
-                    : 'text-neutral-400 hover:text-white'
-                }`}
-              >
-                {currentPath.startsWith('/join') && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-                )}
-                <span>Join Code</span>
-              </Link>
-              <Link
-                to="/orgs/new"
-                className={`transition-colors flex items-center gap-1.5 ${
-                  currentPath === '/orgs/new'
-                    ? 'text-white font-semibold'
-                    : 'text-neutral-400 hover:text-white'
-                }`}
-              >
-                {currentPath === '/orgs/new' && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-                )}
-                <span>New Space</span>
-              </Link>
-            </>
+            <Link
+              to="/join"
+              className={`transition-colors flex items-center gap-1.5 ${
+                currentPath.startsWith('/join')
+                  ? 'text-white font-semibold'
+                  : 'text-neutral-400 hover:text-white'
+              }`}
+            >
+              {currentPath.startsWith('/join') && (
+                <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+              )}
+              <span>Join Workspace</span>
+            </Link>
           )}
         </nav>
 
         {/* Right: High-Contrast Pill CTA (Supaste style) & User Controls */}
-        <div className="flex items-center gap-2.5 flex-shrink-0">
+        <div className="flex items-center gap-2 sm:gap-2.5 flex-shrink-0">
           {activeMembership ? (
             <Link
               to={`/o/${activeMembership.orgSlug}/report/found`}
-              className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-white hover:bg-neutral-200 text-black text-xs font-bold transition-all shadow-md"
+              className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-full bg-white hover:bg-neutral-200 text-black text-xs font-bold transition-all shadow-md whitespace-nowrap"
             >
               <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
               <span>Report Found</span>
@@ -217,10 +202,10 @@ export default function Navbar() {
           ) : (
             <Link
               to="/orgs/new"
-              className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-white hover:bg-neutral-200 text-black text-xs font-bold transition-all shadow-md"
+              className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-full bg-white hover:bg-neutral-200 text-black text-xs font-bold transition-all shadow-md whitespace-nowrap"
             >
               <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-              <span>Create Space</span>
+              <span>Create Workspace</span>
             </Link>
           )}
 

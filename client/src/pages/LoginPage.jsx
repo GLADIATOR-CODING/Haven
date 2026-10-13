@@ -32,9 +32,23 @@ export default function LoginPage() {
     }
   };
 
-  const fillDemoAccount = (demoEmail) => {
+  const fillDemoAccount = async (demoEmail) => {
     setEmail(demoEmail);
     setPassword('Password123!');
+    setLoading(true);
+    setError(null);
+    try {
+      await login({ email: demoEmail, password: 'Password123!' });
+      if (redirectUrl) {
+        navigate(redirectUrl);
+      } else {
+        navigate('/');
+      }
+    } catch (err) {
+      setError(err.message || 'Login failed.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -54,9 +68,9 @@ export default function LoginPage() {
 
         {/* Demo Accounts Quick Login */}
         <div className="p-3.5 rounded-md bg-[var(--bg-subtle)] border border-[var(--border-subtle)] space-y-2">
-          <div className="text-xs font-semibold text-[var(--text-muted)] flex items-center justify-between font-mono">
-            <span>DEMO ACCOUNTS</span>
-            <span className="text-[10px]">Password: Password123!</span>
+          <div className="text-xs font-semibold text-[var(--text-secondary)] flex items-center justify-between font-mono">
+            <span>1-CLICK DEMO LOGIN</span>
+            <span className="text-[10px] text-[var(--text-muted)]">Password: Password123!</span>
           </div>
           <div className="grid grid-cols-2 gap-1.5 text-xs">
             <button
@@ -64,7 +78,7 @@ export default function LoginPage() {
               onClick={() => fillDemoAccount('admin@haven.local')}
               className="px-2.5 py-1.5 rounded border border-[var(--border-subtle)] bg-[var(--bg-card)] hover:border-[var(--border-strong)] text-[var(--text-primary)] font-medium transition-colors text-left"
             >
-              Admin (Campus)
+              Admin (Campus Admin)
             </button>
             <button
               type="button"
@@ -78,14 +92,14 @@ export default function LoginPage() {
               onClick={() => fillDemoAccount('alex@haven.local')}
               className="px-2.5 py-1.5 rounded border border-[var(--border-subtle)] bg-[var(--bg-card)] hover:border-[var(--border-strong)] text-[var(--text-primary)] font-medium transition-colors text-left"
             >
-              Member (Tech Park)
+              Member (Alex Rivera)
             </button>
             <button
               type="button"
               onClick={() => fillDemoAccount('sam@haven.local')}
               className="px-2.5 py-1.5 rounded border border-[var(--border-subtle)] bg-[var(--bg-card)] hover:border-[var(--border-strong)] text-[var(--text-primary)] font-medium transition-colors text-left"
             >
-              Student (Campus)
+              Student (Sam Chen)
             </button>
           </div>
         </div>

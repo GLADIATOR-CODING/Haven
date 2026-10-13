@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Routes, Route, Navigate, Link } from 'react-router-dom';
+import { Routes, Route, Navigate, Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from './api/client';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -55,8 +55,27 @@ function LegalModal({ title, onClose, content }) {
 }
 
 function LandingPage() {
-  const { user, memberships, currentOrgSlug } = useAuth();
+  const navigate = useNavigate();
+  const { user, memberships, currentOrgSlug, demoLogin } = useAuth();
   const [legalDoc, setLegalDoc] = useState(null);
+  const [switchingRole, setSwitchingRole] = useState(null);
+  const [demoError, setDemoError] = useState(null);
+
+  const handleDemoContinue = async (role, orgSlug) => {
+    setSwitchingRole(`${orgSlug}-${role}`);
+    setDemoError(null);
+    try {
+      await demoLogin({ role, orgSlug });
+      navigate(`/o/${orgSlug}`);
+    } catch (err) {
+      console.error('Demo login failed', err);
+      setDemoError(
+        'Backend server on port 5000 is not reachable. Please start the backend with: cd server && npm run dev'
+      );
+    } finally {
+      setSwitchingRole(null);
+    }
+  };
 
   if (user && memberships.length > 0 && currentOrgSlug) {
     return <Navigate to={`/o/${currentOrgSlug}`} replace />;
@@ -90,7 +109,7 @@ function LandingPage() {
               to="/join"
               className="px-4 py-2 rounded-md bg-[var(--bg-card)] hover:bg-[var(--bg-subtle)] text-[var(--text-primary)] border border-[var(--border-subtle)] text-xs font-semibold transition-colors"
             >
-              Join with Access Code
+              Join Workspace
             </Link>
           </div>
         </div>
@@ -117,8 +136,23 @@ function LandingPage() {
           </span>
         </div>
 
+        {demoError && (
+          <div className="p-3.5 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 text-red-700 dark:text-red-300 text-xs flex items-center justify-between gap-3 shadow-xs">
+            <div className="flex items-center gap-2">
+              <span className="font-bold">⚠️ Connection Notice:</span>
+              <span>{demoError}</span>
+            </div>
+            <button
+              onClick={() => setDemoError(null)}
+              className="text-red-600 dark:text-red-400 font-bold hover:underline"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="p-5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] flex flex-col justify-between">
+          <div className="p-5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] flex flex-col justify-between space-y-4">
             <div className="space-y-1.5">
               <div className="text-[11px] font-mono font-semibold text-red-600 dark:text-red-400">
                 UNIVERSITY BLUEPRINT
@@ -130,18 +164,48 @@ function LandingPage() {
                 Configured for student cards, chargers, textbooks, and campus lecture halls.
               </p>
             </div>
-            <div className="pt-4 mt-4 flex items-center justify-between border-t border-[var(--border-subtle)]">
-              <span className="text-[11px] font-mono text-[var(--text-muted)]">CODE: CAMPUS</span>
-              <Link
-                to="/join/CAMPUS"
-                className="px-3.5 py-1.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:hover:bg-neutral-200 text-white dark:text-neutral-900 text-xs font-semibold transition-colors shadow-sm"
-              >
-                Enter Campus
-              </Link>
+
+            <div className="pt-3 border-t border-[var(--border-subtle)] space-y-2">
+              <div className="flex items-center justify-between text-[11px] font-mono">
+                <span className="text-[var(--text-secondary)] font-medium">CODE: CAMPUS</span>
+                <span className="text-[10px] text-[var(--text-muted)] font-semibold uppercase">1-CLICK DEMO ROLES</span>
+              </div>
+              <div className="grid grid-cols-3 gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => handleDemoContinue('member', 'demo-campus')}
+                  disabled={switchingRole !== null}
+                  className="py-1.5 px-2 rounded-md bg-[var(--bg-card)] hover:bg-[var(--bg-subtle-hover)] border border-[var(--border-subtle)] text-[11px] font-semibold text-[var(--text-primary)] transition-colors text-center disabled:opacity-50"
+                  title="Try as regular student/member (Alex Rivera)"
+                >
+                  {switchingRole === 'demo-campus-member' ? 'Loading...' : 'Member'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDemoContinue('moderator', 'demo-campus')}
+                  disabled={switchingRole !== null}
+                  className="py-1.5 px-2 rounded-md bg-[var(--bg-card)] hover:bg-[var(--bg-subtle-hover)] border border-[var(--border-subtle)] text-[11px] font-semibold text-[var(--text-primary)] transition-colors text-center disabled:opacity-50"
+                  title="Try as Security Desk moderator"
+                >
+                  {switchingRole === 'demo-campus-moderator' ? 'Loading...' : 'Moderator'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDemoContinue('admin', 'demo-campus')}
+                  disabled={switchingRole !== null}
+                  className="py-1.5 px-2 rounded-md bg-[var(--bg-card)] hover:bg-[var(--bg-subtle-hover)] border border-[var(--border-subtle)] text-[11px] font-semibold text-[var(--text-primary)] transition-colors text-center disabled:opacity-50"
+                  title="Try as Campus Administrator"
+                >
+                  {switchingRole === 'demo-campus-admin' ? 'Loading...' : 'Admin'}
+                </button>
+              </div>
+              <div className="text-[10px] text-[var(--text-muted)] text-center font-mono">
+                Evaluator quick role switch without typing credentials
+              </div>
             </div>
           </div>
 
-          <div className="p-5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] flex flex-col justify-between">
+          <div className="p-5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] flex flex-col justify-between space-y-4">
             <div className="space-y-1.5">
               <div className="text-[11px] font-mono font-semibold text-red-600 dark:text-red-400">
                 CORPORATE BLUEPRINT
@@ -153,14 +217,44 @@ function LandingPage() {
                 Configured for security access badges, laptop docks, meeting rooms, and cafeteria.
               </p>
             </div>
-            <div className="pt-4 mt-4 flex items-center justify-between border-t border-[var(--border-subtle)]">
-              <span className="text-[11px] font-mono text-[var(--text-muted)]">CODE: OFFICE</span>
-              <Link
-                to="/join/OFFICE"
-                className="px-3.5 py-1.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:hover:bg-neutral-200 text-white dark:text-neutral-900 text-xs font-semibold transition-colors shadow-sm"
-              >
-                Enter Office
-              </Link>
+
+            <div className="pt-3 border-t border-[var(--border-subtle)] space-y-2">
+              <div className="flex items-center justify-between text-[11px] font-mono">
+                <span className="text-[var(--text-secondary)] font-medium">CODE: OFFICE</span>
+                <span className="text-[10px] text-[var(--text-muted)] font-semibold uppercase">1-CLICK DEMO ROLES</span>
+              </div>
+              <div className="grid grid-cols-3 gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => handleDemoContinue('member', 'demo-office')}
+                  disabled={switchingRole !== null}
+                  className="py-1.5 px-2 rounded-md bg-[var(--bg-card)] hover:bg-[var(--bg-subtle-hover)] border border-[var(--border-subtle)] text-[11px] font-semibold text-[var(--text-primary)] transition-colors text-center disabled:opacity-50"
+                  title="Try as corporate member (Alex Rivera)"
+                >
+                  {switchingRole === 'demo-office-member' ? 'Loading...' : 'Member'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDemoContinue('moderator', 'demo-office')}
+                  disabled={switchingRole !== null}
+                  className="py-1.5 px-2 rounded-md bg-[var(--bg-card)] hover:bg-[var(--bg-subtle-hover)] border border-[var(--border-subtle)] text-[11px] font-semibold text-[var(--text-primary)] transition-colors text-center disabled:opacity-50"
+                  title="Try as Security Desk moderator"
+                >
+                  {switchingRole === 'demo-office-moderator' ? 'Loading...' : 'Moderator'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDemoContinue('admin', 'demo-office')}
+                  disabled={switchingRole !== null}
+                  className="py-1.5 px-2 rounded-md bg-[var(--bg-card)] hover:bg-[var(--bg-subtle-hover)] border border-[var(--border-subtle)] text-[11px] font-semibold text-[var(--text-primary)] transition-colors text-center disabled:opacity-50"
+                  title="Try as Workspace Administrator"
+                >
+                  {switchingRole === 'demo-office-admin' ? 'Loading...' : 'Admin'}
+                </button>
+              </div>
+              <div className="text-[10px] text-[var(--text-muted)] text-center font-mono">
+                Evaluator quick role switch without typing credentials
+              </div>
             </div>
           </div>
         </div>
@@ -182,9 +276,9 @@ function LandingPage() {
             <FastReportIntake />
             <div className="space-y-1">
               <div className="font-mono text-xs font-bold text-red-600 dark:text-red-400">01 / FAST REPORT</div>
-              <div className="font-bold text-xs text-[var(--text-primary)]">Under 45 Seconds</div>
+              <div className="font-bold text-xs text-[var(--text-primary)]">Under 45 Seconds (Measured)</div>
               <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
-                Finders select simple trait chips and snap a photo. EXIF location metadata is stripped automatically before upload.
+                Finders select simple trait chips and snap a photo. EXIF location metadata is stripped client-side and verified server-side before storage.
               </p>
             </div>
           </div>
@@ -221,8 +315,9 @@ function LandingPage() {
           content={
             <>
               <p>
-                <strong>1. EXIF Metadata Protection:</strong> Haven automatically strips all GPS, device camera,
-                and timestamp EXIF metadata from uploaded images client-side before transmission.
+                <strong>1. Dual-Layer EXIF Protection:</strong> Haven automatically strips all GPS, device camera,
+                and timestamp EXIF metadata from uploaded images client-side before transmission and strictly enforces
+                server-side Sharp metadata stripping on ingest.
               </p>
               <p>
                 <strong>2. Sensitive Item Masking:</strong> Sensitive assets such as student identity cards,
@@ -301,14 +396,15 @@ export default function App() {
         )}
 
         {healthError && (
-          <div className="bg-red-600 text-white px-4 py-1.5 text-xs font-medium text-center">
-            Backend server unreachable on port 5000.
+          <div className="bg-red-600 text-white px-4 py-2 text-xs font-medium text-center flex flex-wrap items-center justify-center gap-2 shadow-xs">
+            <span>⚠️ Backend server unreachable on port 5000. Start the backend server:</span>
+            <code className="bg-red-800/90 px-2 py-0.5 rounded font-mono text-[11px] font-semibold text-white">cd server && npm run dev</code>
           </div>
         )}
 
         <Navbar />
 
-        <main className="flex-1">
+        <main className="flex-1 pt-2 sm:pt-4">
           <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />

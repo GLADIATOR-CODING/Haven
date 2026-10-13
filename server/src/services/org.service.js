@@ -4,6 +4,7 @@ import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import { Organization } from '../models/Organization.js';
 import { Membership } from '../models/Membership.js';
+import { User } from '../models/User.js';
 import { ApiError } from '../utils/ApiError.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -24,6 +25,11 @@ export function generateInviteCode() {
 }
 
 export async function createOrg(input, userId) {
+  const caller = await User.findById(userId);
+  if (caller && caller.email?.endsWith('@haven.local')) {
+    throw new ApiError(403, 'DEMO_ACCOUNT_RESTRICTED', 'Pre-seeded demo accounts are restricted to demo workspaces and cannot create new organizations.');
+  }
+
   const { name, templateKey = 'campus', handoverInstructions } = input;
   let slug = input.slug || name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
@@ -85,6 +91,11 @@ export async function joinOrgByCode(code, userId) {
   const org = await Organization.findOne({ 'join.code': normalizedCode });
   if (!org) {
     throw new ApiError(404, 'INVALID_CODE', 'Invalid or expired invite code');
+  }
+
+  const caller = await User.findById(userId);
+  if (caller && caller.email?.endsWith('@haven.local') && !['demo-campus', 'demo-office'].includes(org.slug)) {
+    throw new ApiError(403, 'DEMO_ACCOUNT_RESTRICTED', 'Pre-seeded demo accounts are restricted to demo workspaces.');
   }
 
   // Check if already a member

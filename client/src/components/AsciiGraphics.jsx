@@ -64,7 +64,7 @@ export function AsciiGhostMascot({ hero = false, compact = false }) {
       ],
       mode: 'LOCKED',
       caption: 'item located',
-      status: 'match confirmed 98%',
+      status: 'traits verified (example)',
       code: 'PAIR: SECURE',
     },
     {
@@ -137,11 +137,11 @@ export function AsciiGhostMascot({ hero = false, compact = false }) {
         {/* Telemetry Footer */}
         <div className="pt-2 border-t border-[#222222] flex items-center justify-between text-xs font-mono">
           <div className="space-y-0.5">
-            <div className="text-[10px] text-neutral-500 uppercase">MODE: {active.mode}</div>
+            <div className="text-[10px] text-neutral-400 font-medium uppercase">MODE: {active.mode}</div>
             <div className="font-bold text-white uppercase text-[11px]">{active.caption}</div>
           </div>
           <div className="text-right space-y-0.5">
-            <div className="text-[10px] text-neutral-500 uppercase">STATUS</div>
+            <div className="text-[10px] text-neutral-400 font-medium uppercase">STATUS</div>
             <div className="font-semibold text-emerald-400 text-[11px]">{active.status}</div>
           </div>
         </div>
@@ -170,7 +170,7 @@ export function AsciiGhostMascot({ hero = false, compact = false }) {
       </div>
 
       <div className="flex items-center justify-between text-[10px] font-mono pt-0.5">
-        <span className="text-neutral-500 uppercase">STATUS:</span>
+        <span className="text-neutral-400 font-medium uppercase">STATUS:</span>
         <span className="font-semibold text-red-400 uppercase">
           {active.caption}
         </span>
@@ -238,11 +238,11 @@ export function AsciiLostScanner() {
         '│ │ · · · · · · · · ║ · · · · │ │',
         '│ │ · · · · · · · · ╚═> MATCH │ │',
         '│ └───────────────────────────┘ │',
-        '│ CONFIDENCE: 98.4% ATTRIBUTES  │',
+        '│ EXAMPLE: ATTRIBUTE MATCHING   │',
         '└───────────────────────────────┘',
       ],
       tag: 'CORRELATING',
-      detail: 'SCORE: 98.4% MATCH',
+      detail: 'EXAMPLE: 98.4% MATCH',
       color: 'text-emerald-400',
     },
     {
@@ -295,7 +295,7 @@ export function AsciiLostScanner() {
       </div>
 
       <div className="flex items-center justify-between text-[10px] font-mono pt-0.5">
-        <span className="text-neutral-500 uppercase">{current.tag}</span>
+        <span className="text-neutral-400 font-medium uppercase">{current.tag}</span>
         <span className={`font-bold ${current.color}`}>
           {current.detail}
         </span>
@@ -476,7 +476,7 @@ export function NormalCustodyVault() {
             rx="2"
             className="fill-[#161619]"
           />
-          <text x="129" y="101.5" className="fill-neutral-400 font-mono text-[7px]">
+          <text x="129" y="101.5" className="fill-neutral-300 font-mono text-[8px] font-medium">
             CHALLENGE:
           </text>
           <text x="212" y="101.5" textAnchor="end" className="fill-emerald-400 font-mono text-[7px] font-bold">
@@ -491,14 +491,14 @@ export function NormalCustodyVault() {
             ATOMIC LOCK
           </text>
 
-          <text x="171" y="128" textAnchor="middle" className="fill-neutral-500 font-mono text-[6.5px]">
+          <text x="171" y="128" textAnchor="middle" className="fill-neutral-200 font-mono text-[8px] font-semibold">
             VERIFIED HANDOVER
           </text>
         </svg>
       </div>
 
       <div className="flex items-center justify-between text-[10px] font-mono pt-0.5">
-        <span className="text-neutral-500 uppercase">AUTHENTICATION:</span>
+        <span className="text-neutral-400 font-medium uppercase">AUTHENTICATION:</span>
         <span className="font-bold text-white">
           6-DIGIT PICKUP CODE
         </span>
@@ -625,7 +625,7 @@ export function FastReportIntake() {
             strokeOpacity="0.75"
           />
 
-          <text x="63" y="123" textAnchor="middle" className="fill-neutral-500 font-mono text-[6.5px]">
+          <text x="63" y="123" textAnchor="middle" className="fill-neutral-300 font-mono text-[7.5px] font-medium">
             AF-C · ISO 200 · 35mm
           </text>
 
@@ -667,7 +667,7 @@ export function FastReportIntake() {
             rx="2"
             className="fill-[#161619]"
           />
-          <text x="129" y="55.5" className="fill-neutral-400 font-mono text-[7px]">
+          <text x="129" y="55.5" className="fill-neutral-300 font-mono text-[8px] font-medium">
             ITEM:
           </text>
           <text x="212" y="55.5" textAnchor="end" className="fill-neutral-200 font-mono text-[7px] font-semibold">
@@ -683,7 +683,7 @@ export function FastReportIntake() {
             rx="2"
             className="fill-[#161619]"
           />
-          <text x="129" y="72.5" className="fill-neutral-400 font-mono text-[7px]">
+          <text x="129" y="72.5" className="fill-neutral-300 font-mono text-[8px] font-medium">
             INTAKE:
           </text>
           <text x="212" y="72.5" textAnchor="end" className="fill-emerald-400 font-mono text-[7px] font-bold">
@@ -699,7 +699,7 @@ export function FastReportIntake() {
             rx="2"
             className="fill-[#161619]"
           />
-          <text x="129" y="89.5" className="fill-neutral-400 font-mono text-[7px]">
+          <text x="129" y="89.5" className="fill-neutral-300 font-mono text-[8px] font-medium">
             EXIF LEAK:
           </text>
           <text x="212" y="89.5" textAnchor="end" className="fill-emerald-400 font-mono text-[7px] font-bold">
@@ -715,16 +715,16 @@ export function FastReportIntake() {
             SNAP
           </text>
 
-          <text x="171" y="128" textAnchor="middle" className="fill-neutral-500 font-mono text-[6.5px]">
-            CLIENT-SIDE SANITIZED
+          <text x="171" y="128" textAnchor="middle" className="fill-neutral-200 font-mono text-[8px] font-semibold">
+            DUAL-LAYER SANITIZED
           </text>
         </svg>
       </div>
 
       <div className="flex items-center justify-between text-[10px] font-mono pt-0.5">
-        <span className="text-neutral-500 uppercase">PRIVACY PROTOCOL:</span>
+        <span className="text-neutral-400 font-medium uppercase">PRIVACY PROTOCOL:</span>
         <span className="font-bold text-white">
-          ZERO EXIF METADATA
+          ZERO EXIF (CLIENT+SERVER)
         </span>
       </div>
     </div>
