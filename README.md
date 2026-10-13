@@ -1,8 +1,10 @@
-# <p align="center"><img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=1,6,11&height=180&section=header&text=HAVEN&fontSize=70&fontColor=ffffff&fontAlignY=38&desc=Universal%20Lost%20%26%20Found%20Platform%20for%20Physical%20Spaces&descFontSize=18&descAlignY=62" width="100%" alt="Haven Header"/></p>
+<p align="center">
+  <img src="./assets/haven-banner.svg" width="100%" alt="Haven Platform Banner" />
+</p>
 
 <p align="center">
   <a href="https://readme-typing-svg.demolab.com">
-    <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=20&pause=1200&color=E11D48&center=true&vCenter=true&width=700&lines=Universal+Lost+%26+Found+for+Physical+Spaces;Intake+in+under+45+seconds+verified;Dual-Layer+EXIF+Stripping+%7C+0-Bytes+Privacy+Leak;Zero-Knowledge+Blind+Verification+via+HMAC-SHA256;1-Click+Role+Testing+for+Evaluators;Engineered+for+Campuses%2C+Offices%2C+Hostels+%26+Venues" alt="Typing SVG" />
+    <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&amp;weight=600&amp;size=20&amp;pause=1200&amp;color=E11D48&amp;center=true&amp;vCenter=true&amp;width=700&amp;lines=Universal+Lost+%26+Found+for+Physical+Spaces;Intake+in+under+45+seconds+verified;Dual-Layer+EXIF+Stripping+%7C+0-Bytes+Privacy+Leak;Zero-Knowledge+Blind+Verification+via+HMAC-SHA256;1-Click+Role+Testing+for+Evaluators;Engineered+for+Campuses%2C+Offices%2C+Hostels+%26+Venues" alt="Typing SVG" />
   </a>
 </p>
 
