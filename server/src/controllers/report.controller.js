@@ -1,4 +1,5 @@
 import * as reportService from '../services/reports/report.service.js';
+import * as matchingService from '../services/matching/matching.service.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 
 export const createReport = asyncHandler(async (req, res) => {
@@ -18,6 +19,13 @@ export const createReport = asyncHandler(async (req, res) => {
       payload.privateDetailsInput = [];
     }
   }
+  if (typeof payload.geo === 'string') {
+    try {
+      payload.geo = JSON.parse(payload.geo);
+    } catch {
+      payload.geo = null;
+    }
+  }
 
   const fileBuffer = req.file?.buffer || null;
   const result = await reportService.createReport(req.org, req.user, payload, fileBuffer);
@@ -30,8 +38,25 @@ export const getMyReports = asyncHandler(async (req, res) => {
 });
 
 export const getFoundReports = asyncHandler(async (req, res) => {
-  const reports = await reportService.getPublishedFoundReports(req.org._id, req.query, req.org);
-  res.status(200).json({ reports });
+  const userRole = req.membership?.role || 'member';
+  const reports = await reportService.getPublishedFoundReports(
+    req.org._id,
+    req.query,
+    req.org,
+    userRole
+  );
+
+  let pendingCount = 0;
+  if (userRole === 'admin' || userRole === 'moderator') {
+    const { Report } = await import('../models/Report.js');
+    pendingCount = await Report.countDocuments({
+      orgId: req.org._id,
+      type: 'found',
+      status: 'pending_review',
+    });
+  }
+
+  res.status(200).json({ reports, pendingCount });
 });
 
 export const getReportById = asyncHandler(async (req, res) => {
@@ -44,3 +69,43 @@ export const getReportById = asyncHandler(async (req, res) => {
   );
   res.status(200).json({ report });
 });
+
+export const getReportMatches = asyncHandler(async (req, res) => {
+  const matches = await matchingService.getMatchesForReport(
+    req.org._id,
+    req.params.id,
+    req.user,
+    req.org
+  );
+  res.status(200).json({ matches });
+});
+
+export const dismissMatch = asyncHandler(async (req, res) => {
+  const match = await matchingService.dismissMatch(req.org._id, req.params.matchId);
+  res.status(200).json({ match });
+});
+
+export const updateReportStatus = asyncHandler(async (req, res) => {
+  const { status } = req.body;
+  const report = await reportService.updateReportStatus(
+    req.org._id,
+    req.params.id,
+    req.user,
+    req.membership.role,
+    status,
+    req.org
+  );
+  res.status(200).json({ report });
+});
+
+export const reviewReport = asyncHandler(async (req, res) => {
+  const { action } = req.body;
+  const report = await reportService.reviewReport(
+    req.params.id,
+    action,
+    req.user._id,
+    req.org
+  );
+  res.status(200).json({ report });
+});
+

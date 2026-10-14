@@ -28,10 +28,15 @@ const demoLoginSchema = {
   }),
 };
 
+import { uploadMiddleware } from '../services/storage/storage.service.js';
+
 router.post('/signup', validate(signupSchema), authController.signup);
 router.post('/login', validate(loginSchema), authController.login);
 router.post('/demo-login', validate(demoLoginSchema), authController.demoLogin);
 router.post('/logout', authController.logout);
 router.get('/me', auth, authController.me);
+router.get('/admin/moderator-requests', auth, authController.getAdminModeratorRequests);
+router.patch('/profile', auth, uploadMiddleware.single('avatar'), authController.updateProfile);
 
 export default router;
+

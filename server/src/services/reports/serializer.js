@@ -5,7 +5,7 @@
  * 1. privateDetails is ALWAYS stripped.
  * 2. Sensitive category photos are masked in public/feed/member views until verified/handed over.
  */
-export function publicView(report, categoryConfig = null) {
+export function publicView(report, categoryConfig = null, locations = []) {
   if (!report) return null;
 
   // Convert Mongoose document to plain object if needed
@@ -29,6 +29,10 @@ export function publicView(report, categoryConfig = null) {
     doc.photoMasked = false;
   }
 
+  // 4. Resolve zone and privacy fuzzing
+  const locObj = Array.isArray(locations) ? locations.find((l) => l.key === doc.location) : null;
+  const locationZone = locObj?.zone || 'Campus Zone';
+
   return {
     id: doc._id || doc.id,
     orgId: doc.orgId,
@@ -41,7 +45,10 @@ export function publicView(report, categoryConfig = null) {
     colors: doc.colors || [],
     brand: doc.brand || '',
     location: doc.location,
+    locationZone,
     locationNote: doc.locationNote || '',
+    hasGeo: !!(doc.geo && doc.geo.lat != null),
+    fuzzedRadius: '~100m proximity zone',
     occurredFrom: doc.occurredFrom,
     occurredTo: doc.occurredTo,
     photo: doc.photo,

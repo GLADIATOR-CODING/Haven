@@ -7,11 +7,15 @@ export class ClientError extends Error {
   }
 }
 
-async function request(endpoint, options = {}) {
-  const url = endpoint.startsWith('http') ? endpoint : endpoint;
+const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
 
+async function request(endpoint, options = {}) {
+  const url = endpoint.startsWith('http') ? endpoint : `${API_BASE}${endpoint}`;
+
+  const token = localStorage.getItem('haven_token');
   const defaultHeaders = {
     'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 
   const config = {
@@ -22,6 +26,7 @@ async function request(endpoint, options = {}) {
     },
     credentials: 'include', // Ensures same-origin / proxied cookies are sent
   };
+
 
   if (options.body && typeof options.body === 'object' && !(options.body instanceof FormData)) {
     config.body = JSON.stringify(options.body);

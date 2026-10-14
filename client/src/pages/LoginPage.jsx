@@ -19,9 +19,11 @@ export default function LoginPage() {
     setError(null);
     setLoading(true);
     try {
-      await login({ email, password });
+      const res = await login({ email, password });
       if (redirectUrl) {
         navigate(redirectUrl);
+      } else if (res?.memberships?.length > 0) {
+        navigate(`/o/${res.memberships[0].orgSlug}`);
       } else {
         navigate('/');
       }
@@ -38,9 +40,11 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
     try {
-      await login({ email: demoEmail, password: 'Password123!' });
+      const res = await login({ email: demoEmail, password: 'Password123!' });
       if (redirectUrl) {
         navigate(redirectUrl);
+      } else if (res?.memberships?.length > 0) {
+        navigate(`/o/${res.memberships[0].orgSlug}`);
       } else {
         navigate('/');
       }

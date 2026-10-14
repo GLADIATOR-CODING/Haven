@@ -4,6 +4,7 @@ import { User } from '../src/models/User.js';
 import { Organization } from '../src/models/Organization.js';
 import { Membership } from '../src/models/Membership.js';
 import { Report } from '../src/models/Report.js';
+import { Match } from '../src/models/Match.js';
 import { seedInternal } from './seedData.js';
 
 async function seed() {
@@ -16,6 +17,7 @@ async function seed() {
     Organization.deleteMany({}),
     Membership.deleteMany({}),
     Report.deleteMany({}),
+    Match.deleteMany({}),
   ]);
   console.log('[seed] Cleared existing database records.');
 

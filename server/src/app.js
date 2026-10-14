@@ -22,10 +22,28 @@ app.set('trust proxy', 1);
 // 2. Security headers
 app.use(helmet());
 
-// 3. CORS configuration (allowing credentials for cookies)
+// 3. CORS configuration (allowing credentials for cookies & multiple origins)
+const allowedOrigins = (env.CLIENT_URL || '')
+  .split(',')
+  .map((url) => url.trim())
+  .filter(Boolean);
+
 app.use(
   cors({
-    origin: env.CLIENT_URL,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (e.g. mobile apps, curl, server-to-server)
+      if (!origin) return callback(null, true);
+
+      const isAllowed =
+        allowedOrigins.includes(origin) ||
+        env.NODE_ENV === 'development' ||
+        allowedOrigins.includes('*');
+
+      if (isAllowed) {
+        return callback(null, true);
+      }
+      return callback(new Error(`CORS blocked for origin: ${origin}`));
+    },
     credentials: true,
   })
 );

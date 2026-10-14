@@ -57,7 +57,7 @@ describe('Phase 1 Part 2: Found Report Domain, State Machine & Privacy Serializa
     await request(app)
       .post('/api/orgs/join')
       .set('Authorization', `Bearer ${memberToken}`)
-      .send({ code: resOrg.body.org.join.code });
+      .send({ slug: orgSlug });
   });
 
   it('2. Create Found Report in regular category publishes immediately', async () => {

@@ -7,13 +7,18 @@ export const createOrg = asyncHandler(async (req, res) => {
 });
 
 export const joinOrg = asyncHandler(async (req, res) => {
-  const result = await orgService.joinOrgByCode(req.body.code, req.user._id);
+  const result = await orgService.joinOrg(req.body, req.user._id);
   res.status(200).json(result);
 });
 
 export const getOrgConfig = asyncHandler(async (req, res) => {
+  const orgObj = req.org.toObject ? req.org.toObject() : { ...req.org };
+  // The 8-digit access code is strictly for admins. NEVER leak to non-admins!
+  if (req.membership?.role !== 'admin') {
+    delete orgObj.join;
+  }
   res.status(200).json({
-    org: req.org,
+    org: orgObj,
     currentRole: req.membership.role,
   });
 });

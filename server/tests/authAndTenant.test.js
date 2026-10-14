@@ -85,7 +85,7 @@ describe('Phase 1 Part 1: Health, Auth & Tenant Isolation', () => {
     const res = await request(app)
       .post('/api/orgs/join')
       .set('Authorization', `Bearer ${memberToken}`)
-      .send({ code: inviteCode });
+      .send({ slug: orgSlug });
 
     expect(res.status).toBe(200);
     expect(res.body.membership.role).toBe('member');

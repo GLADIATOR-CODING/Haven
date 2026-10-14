@@ -18,14 +18,10 @@ export async function signup({ name, email, password }) {
   });
 
   const token = signToken({ id: user._id, email: user.email });
+  const profile = await getMe(user._id);
 
   return {
-    user: {
-      id: user._id,
-      name: user.name,
-      email: user.email,
-      createdAt: user.createdAt,
-    },
+    ...profile,
     token,
   };
 }
@@ -42,14 +38,10 @@ export async function login({ email, password }) {
   }
 
   const token = signToken({ id: user._id, email: user.email });
+  const profile = await getMe(user._id);
 
   return {
-    user: {
-      id: user._id,
-      name: user.name,
-      email: user.email,
-      createdAt: user.createdAt,
-    },
+    ...profile,
     token,
   };
 }
@@ -69,6 +61,9 @@ export async function getMe(userId) {
       id: user._id,
       name: user.name,
       email: user.email,
+      avatar: user.avatar || '',
+      phoneNumber: user.phoneNumber || '',
+      bio: user.bio || '',
       createdAt: user.createdAt,
     },
     memberships: memberships.map((m) => ({
@@ -83,6 +78,22 @@ export async function getMe(userId) {
     })),
   };
 }
+
+export async function updateProfile(userId, { name, avatar, phoneNumber, bio }) {
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new ApiError(404, 'USER_NOT_FOUND', 'User profile not found');
+  }
+
+  if (name !== undefined && name.trim()) user.name = name.trim();
+  if (avatar !== undefined) user.avatar = avatar.trim();
+  if (phoneNumber !== undefined) user.phoneNumber = phoneNumber.trim();
+  if (bio !== undefined) user.bio = bio.trim();
+
+  await user.save();
+  return getMe(userId);
+}
+
 
 export async function demoLogin({ role = 'member', orgSlug = 'demo-campus' }) {
   let demoEmail;
@@ -110,4 +121,18 @@ export async function demoLogin({ role = 'member', orgSlug = 'demo-campus' }) {
     token,
     activeOrgSlug: normalizedSlug,
   };
+}
+
+export async function getAdminModeratorRequests(userId) {
+  const adminMemberships = await Membership.find({ userId, role: 'admin' });
+  const orgIds = adminMemberships.map((m) => m.orgId);
+  if (orgIds.length === 0) {
+    return [];
+  }
+
+  const { ModeratorRequest } = await import('../models/ModeratorRequest.js');
+  return ModeratorRequest.find({ orgId: { $in: orgIds } })
+    .populate('userId', 'name email avatar phoneNumber bio createdAt')
+    .populate('orgId', 'name slug templateKey')
+    .sort({ createdAt: -1 });
 }

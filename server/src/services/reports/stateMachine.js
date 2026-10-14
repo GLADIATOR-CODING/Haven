@@ -10,7 +10,8 @@ const foundTransitions = {
 };
 
 const lostTransitions = {
-  open: ['resolved', 'expired'],
+  open: ['matched', 'resolved', 'expired'],
+  matched: ['open', 'resolved', 'expired'],
   resolved: [],
   expired: [],
 };

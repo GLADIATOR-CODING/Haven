@@ -29,6 +29,7 @@ import {
   Lock,
   Building2,
   HelpCircle,
+  Navigation,
 } from 'lucide-react';
 import { AsciiGhostMascot } from '../components/AsciiGraphics';
 
@@ -113,6 +114,7 @@ export default function ReportFoundPage() {
     timeChip: 'Just now',
     title: '',
     description: '',
+    geo: null,
     privateAnswers: {},
   });
 
@@ -123,6 +125,76 @@ export default function ReportFoundPage() {
   const [submittedReport, setSubmittedReport] = useState(null);
   const [error, setError] = useState(null);
   const [showOptionalDetails, setShowOptionalDetails] = useState(false);
+  const [geoLoading, setGeoLoading] = useState(false);
+  const [geoError, setGeoError] = useState(null);
+  const [analyzingImage, setAnalyzingImage] = useState(false);
+  const [visionAutoDetected, setVisionAutoDetected] = useState(null);
+
+  const handleAutoClassifyImage = async (fileToAnalyze) => {
+    if (!fileToAnalyze) return;
+    setAnalyzingImage(true);
+    setVisionAutoDetected(null);
+    try {
+      const formData = new FormData();
+      formData.append('image', fileToAnalyze);
+      const res = await api.post(`/api/o/${slug}/ai/analyze-image`, formData);
+      if (res?.analysis && res.analysis.source === 'gemini_vision') {
+        const { category, colors, brand, title, description, sensitive, sensitiveReason } = res.analysis;
+        setDraft((prev) => ({
+          ...prev,
+          category: category || prev.category,
+          colors: colors?.length ? colors : prev.colors,
+          brand: brand || prev.brand,
+          title: title || prev.title,
+          description: description || prev.description,
+        }));
+        setVisionAutoDetected({
+          category,
+          colors,
+          brand,
+          title,
+          sensitive,
+          sensitiveReason,
+        });
+      }
+    } catch (err) {
+      console.warn('Vision auto-classification skipped:', err.message);
+    } finally {
+      setAnalyzingImage(false);
+    }
+  };
+
+  const handleCaptureGeo = () => {
+    if (!navigator.geolocation) {
+      setGeoError('Geolocation is not supported by your browser.');
+      return;
+    }
+    setGeoLoading(true);
+    setGeoError(null);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setDraft((prev) => ({
+          ...prev,
+          geo: {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+            accuracy: Math.round(position.coords.accuracy),
+          },
+        }));
+        setGeoLoading(false);
+      },
+      (err) => {
+        setGeoError(err.message || 'Unable to retrieve your location.');
+        setGeoLoading(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
+  };
+
+  const handleRemoveGeo = () => {
+    setDraft((prev) => ({ ...prev, geo: null }));
+    setGeoError(null);
+  };
 
   const handlePhotoSelect = async (e) => {
     const file = e.target.files?.[0];
@@ -139,9 +211,11 @@ export default function ReportFoundPage() {
       const compressedFile = await imageCompression(file, options);
       setSelectedFile(compressedFile);
       setPhotoPreview(URL.createObjectURL(compressedFile));
+      handleAutoClassifyImage(compressedFile);
     } catch {
       setSelectedFile(file);
       setPhotoPreview(URL.createObjectURL(file));
+      handleAutoClassifyImage(file);
     } finally {
       setCompressing(false);
     }
@@ -150,6 +224,7 @@ export default function ReportFoundPage() {
   const removePhoto = () => {
     setSelectedFile(null);
     setPhotoPreview(null);
+    setVisionAutoDetected(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -205,6 +280,10 @@ export default function ReportFoundPage() {
       formData.append('occurredFrom', occurredTime);
       formData.append('occurredTo', occurredTime);
       formData.append('privateDetailsInput', JSON.stringify(privateDetailsInput));
+
+      if (draft.geo) {
+        formData.append('geo', JSON.stringify(draft.geo));
+      }
 
       if (selectedFile) {
         formData.append('photo', selectedFile);
@@ -346,6 +425,64 @@ export default function ReportFoundPage() {
             onChange={handlePhotoSelect}
             className="hidden"
           />
+
+          {/* Gemini Vision Analyzing Loader */}
+          {analyzingImage && (
+            <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-700 dark:text-emerald-400 flex items-center gap-2 animate-pulse">
+              <Sparkles className="w-4 h-4 text-emerald-500 animate-spin" />
+              <span>Gemini Vision analyzing photo: auto-detecting category, colors, and shielding sensitive PII...</span>
+            </div>
+          )}
+
+          {/* Auto-detected Confirmation Banner */}
+          {visionAutoDetected && (
+            <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-800 dark:text-emerald-300 space-y-1.5 shadow-xs">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 font-bold text-xs text-emerald-700 dark:text-emerald-300">
+                  <Sparkles className="w-4 h-4 text-emerald-500" />
+                  <span>Auto-Detected by Gemini Vision</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setVisionAutoDetected(null)}
+                  className="text-xs opacity-60 hover:opacity-100 font-bold"
+                  title="Dismiss badge"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap font-mono text-[11px]">
+                {visionAutoDetected.title && (
+                  <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-800 dark:text-emerald-200">
+                    Title: {visionAutoDetected.title}
+                  </span>
+                )}
+                {visionAutoDetected.category && (
+                  <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-800 dark:text-emerald-200">
+                    Category: {visionAutoDetected.category}
+                  </span>
+                )}
+                {visionAutoDetected.colors?.length > 0 && (
+                  <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-800 dark:text-emerald-200">
+                    Colors: {visionAutoDetected.colors.join(', ')}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Sensitive Item Warning & Shielding */}
+          {visionAutoDetected?.sensitive && (
+            <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-800 dark:text-amber-300 flex items-center gap-2.5">
+              <ShieldCheck className="w-5 h-5 text-amber-500 shrink-0" />
+              <div>
+                <span className="font-bold">Sensitive Item Detected:</span>{' '}
+                <span>
+                  {visionAutoDetected.sensitiveReason || 'This item contains personal identity credentials. Photos will be automatically masked on public feeds.'}
+                </span>
+              </div>
+            </div>
+          )}
 
           {photoPreview ? (
             <div className="relative rounded-lg overflow-hidden border border-[var(--border-subtle)] bg-[var(--bg-subtle)] h-56 sm:h-64 flex items-center justify-center">
@@ -536,6 +673,48 @@ export default function ReportFoundPage() {
                 );
               })}
             </div>
+
+            {/* Geotag GPS Pinpoint */}
+            <div className="pt-3 border-t border-[var(--border-subtle)] flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={handleCaptureGeo}
+                  disabled={geoLoading}
+                  className={`px-3 py-1.5 rounded-lg border text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+                    draft.geo
+                      ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                      : 'border-[var(--border-subtle)] bg-[var(--bg-subtle)] text-[var(--text-primary)] hover:border-[var(--border-strong)]'
+                  }`}
+                >
+                  <Navigation className={`w-3.5 h-3.5 ${geoLoading ? 'animate-spin' : ''}`} />
+                  <span>{geoLoading ? 'Locating...' : draft.geo ? 'GPS Geotagged' : 'Tag GPS Location'}</span>
+                </button>
+
+                {draft.geo && (
+                  <span className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 bg-emerald-500/5 px-2.5 py-1 rounded-md border border-emerald-500/20">
+                    <span>
+                      [{draft.geo.lat.toFixed(4)}, {draft.geo.lng.toFixed(4)}] (±{draft.geo.accuracy}m)
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleRemoveGeo}
+                      className="text-[var(--text-muted)] hover:text-red-500 font-bold ml-0.5 text-xs"
+                      title="Remove Geotag"
+                    >
+                      ✕
+                    </button>
+                  </span>
+                )}
+              </div>
+
+              <span className="text-[10px] text-[var(--text-muted)] font-mono uppercase tracking-wider">
+                OPTIONAL EXACT GPS PINPOINT
+              </span>
+            </div>
+            {geoError && (
+              <p className="text-[11px] text-red-500 font-medium">{geoError}</p>
+            )}
           </div>
 
           {/* When was it found */}

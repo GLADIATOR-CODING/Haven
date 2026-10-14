@@ -13,7 +13,8 @@ const envSchema = z.object({
   CLOUDINARY_CLOUD_NAME: z.string().default('demo'),
   CLOUDINARY_API_KEY: z.string().default('demo'),
   CLOUDINARY_API_SECRET: z.string().default('demo'),
-  AI_PROVIDER: z.string().default('none'),
+  AI_PROVIDER: z.string().default('gemini'),
+  GEMINI_API_KEY: z.string().optional().default(''),
   AI_API_KEY: z.string().optional().default(''),
   AI_TIMEOUT_MS: z.coerce.number().default(8000),
 });

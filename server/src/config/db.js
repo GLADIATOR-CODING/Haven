@@ -4,11 +4,37 @@ import { env } from './env.js';
 let memoryServer = null;
 
 export async function connectDB() {
+  // Listen for runtime connection changes
+  mongoose.connection.on('disconnected', () => {
+    console.warn('[database] MongoDB connection lost. Attempting auto-reconnect...');
+  });
+  mongoose.connection.on('reconnected', () => {
+    console.log('[database] MongoDB reconnected successfully.');
+  });
+  mongoose.connection.on('error', (err) => {
+    console.error('[database] Mongoose runtime connection error:', err.message);
+  });
+
   try {
     const conn = await mongoose.connect(env.MONGODB_URI, {
-      serverSelectionTimeoutMS: 2000,
+      serverSelectionTimeoutMS: 8000,
+      socketTimeoutMS: 45000,
+      connectTimeoutMS: 15000,
+      maxPoolSize: 10,
+      minPoolSize: 2,
+      retryWrites: true,
     });
     console.log(`[database] MongoDB connected: ${conn.connection.host}`);
+
+    // Ensure demo workspaces, accounts, and sample requests are available
+    try {
+      const { seedInternal } = await import('../../scripts/seedData.js');
+      await seedInternal();
+      console.log('[database] Demo workspaces, sample records, and staff requests verified.');
+    } catch (seedErr) {
+      console.warn('[database] Demo seeding verification notice:', seedErr.message);
+    }
+
     return conn;
   } catch (error) {
     if (env.NODE_ENV === 'development') {

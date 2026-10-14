@@ -54,7 +54,17 @@ export function AuthProvider({ children }) {
   const loginMutation = useMutation({
     mutationFn: (credentials) => api.post('/api/auth/login', credentials),
     onSuccess: (data) => {
+      if (data.token) {
+        localStorage.setItem('haven_token', data.token);
+      }
+      queryClient.clear();
       queryClient.setQueryData(['authMe'], data);
+      if (data.memberships && data.memberships.length > 0) {
+        selectOrgSlug(data.memberships[0].orgSlug);
+      } else {
+        setCurrentOrgSlug(null);
+        localStorage.removeItem('haven_active_org_slug');
+      }
       refetchMe();
     },
   });
@@ -62,7 +72,13 @@ export function AuthProvider({ children }) {
   const signupMutation = useMutation({
     mutationFn: (userData) => api.post('/api/auth/signup', userData),
     onSuccess: (data) => {
+      if (data.token) {
+        localStorage.setItem('haven_token', data.token);
+      }
+      queryClient.clear();
       queryClient.setQueryData(['authMe'], data);
+      setCurrentOrgSlug(null);
+      localStorage.removeItem('haven_active_org_slug');
       refetchMe();
     },
   });
@@ -70,23 +86,36 @@ export function AuthProvider({ children }) {
   const demoLoginMutation = useMutation({
     mutationFn: (demoParams) => api.post('/api/auth/demo-login', demoParams),
     onSuccess: (data) => {
+      if (data.token) {
+        localStorage.setItem('haven_token', data.token);
+      }
+      queryClient.clear();
       queryClient.setQueryData(['authMe'], data);
       if (data.activeOrgSlug) {
         selectOrgSlug(data.activeOrgSlug);
+      } else if (data.memberships && data.memberships.length > 0) {
+        selectOrgSlug(data.memberships[0].orgSlug);
       }
       refetchMe();
-      queryClient.invalidateQueries({ queryKey: ['orgConfig'] });
-      queryClient.invalidateQueries({ queryKey: ['myReports'] });
-      queryClient.invalidateQueries({ queryKey: ['foundFeed'] });
     },
   });
 
   const logoutMutation = useMutation({
     mutationFn: () => api.post('/api/auth/logout'),
-    onSuccess: () => {
+    onSettled: () => {
+      localStorage.removeItem('haven_token');
+      localStorage.removeItem('haven_active_org_slug');
+      queryClient.clear();
       queryClient.setQueryData(['authMe'], null);
       setCurrentOrgSlug(null);
-      localStorage.removeItem('haven_active_org_slug');
+    },
+  });
+
+  const updateProfileMutation = useMutation({
+    mutationFn: (profileData) => api.patch('/api/auth/profile', profileData),
+    onSuccess: (data) => {
+      queryClient.setQueryData(['authMe'], data);
+      refetchMe();
     },
   });
 
@@ -100,8 +129,10 @@ export function AuthProvider({ children }) {
     demoLogin: demoLoginMutation.mutateAsync,
     signup: signupMutation.mutateAsync,
     logout: logoutMutation.mutateAsync,
+    updateProfile: updateProfileMutation.mutateAsync,
     refetchMe,
   };
+
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

@@ -10,6 +10,12 @@ import JoinPage from './pages/JoinPage';
 import CreateOrgPage from './pages/CreateOrgPage';
 import OrgHomePage from './pages/OrgHomePage';
 import ReportFoundPage from './pages/ReportFoundPage';
+import ReportLostPage from './pages/ReportLostPage';
+import FoundFeedPage from './pages/FoundFeedPage';
+import ActivityPage from './pages/ActivityPage';
+import ClaimPage from './pages/ClaimPage';
+import ProfilePage from './pages/ProfilePage';
+
 import {
   Shield,
   Clock,
@@ -411,9 +417,16 @@ export default function App() {
             <Route path="/signup" element={<SignupPage />} />
             <Route path="/join" element={<JoinPage />} />
             <Route path="/join/:code" element={<JoinPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
             <Route path="/orgs/new" element={<CreateOrgPage />} />
+            <Route path="/create" element={<CreateOrgPage />} />
+
             <Route path="/o/:slug" element={<OrgHomePage />} />
+            <Route path="/o/:slug/feed" element={<FoundFeedPage />} />
+            <Route path="/o/:slug/activity" element={<ActivityPage />} />
+            <Route path="/o/:slug/claim/:id" element={<ClaimPage />} />
             <Route path="/o/:slug/report/found" element={<ReportFoundPage />} />
+            <Route path="/o/:slug/report/lost" element={<ReportLostPage />} />
           </Routes>
         </main>
       </div>

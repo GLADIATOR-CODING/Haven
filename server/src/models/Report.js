@@ -27,7 +27,7 @@ const reportSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['pending_review', 'published', 'claim_pending', 'handed_over', 'expired', 'rejected', 'open', 'resolved'],
+      enum: ['pending_review', 'published', 'claim_pending', 'handed_over', 'expired', 'rejected', 'open', 'matched', 'resolved'],
       required: true,
       index: true,
     },
@@ -78,6 +78,11 @@ const reportSchema = new mongoose.Schema(
     photo: {
       url: { type: String, default: '' },
       publicId: { type: String, default: '' },
+    },
+    geo: {
+      lat: { type: Number },
+      lng: { type: Number },
+      accuracy: { type: Number },
     },
     privateDetails: {
       type: [privateDetailSchema],

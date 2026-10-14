@@ -4,11 +4,13 @@ import { User } from '../models/User.js';
 
 export async function auth(req, res, next) {
   try {
-    const token =
-      req.cookies?.haven_token ||
-      (req.headers.authorization?.startsWith('Bearer ')
-        ? req.headers.authorization.split(' ')[1]
-        : null);
+    const authHeader = req.headers.authorization;
+    const bearerToken =
+      authHeader && authHeader.startsWith('Bearer ')
+        ? authHeader.split(' ')[1]
+        : null;
+
+    const token = bearerToken || req.cookies?.haven_token;
 
     if (!token) {
       throw new ApiError(401, 'UNAUTHORIZED', 'Authentication is required');

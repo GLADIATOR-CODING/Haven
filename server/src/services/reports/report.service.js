@@ -3,6 +3,8 @@ import { ApiError } from '../../utils/ApiError.js';
 import { hashSecret } from '../../utils/hmac.js';
 import { publicView } from './serializer.js';
 import { processAndSaveImage } from '../storage/storage.service.js';
+import { runMatchingForReport } from '../matching/matching.service.js';
+import { validateReportTransition } from './stateMachine.js';
 
 export async function createReport(org, user, payload, fileBuffer = null) {
   const {
@@ -16,6 +18,7 @@ export async function createReport(org, user, payload, fileBuffer = null) {
     locationNote = '',
     occurredFrom,
     occurredTo,
+    geo = null,
     privateDetailsInput = [],
   } = payload;
 
@@ -84,7 +87,17 @@ export async function createReport(org, user, payload, fileBuffer = null) {
   const fromDate = occurredFrom ? new Date(occurredFrom) : new Date();
   const toDate = occurredTo ? new Date(occurredTo) : fromDate;
 
-  // 8. Create Report
+  // 8. Geo coordinates handling (if provided)
+  let geoCoordinates = undefined;
+  if (geo && typeof geo === 'object' && geo.lat != null && geo.lng != null) {
+    geoCoordinates = {
+      lat: Number(geo.lat),
+      lng: Number(geo.lng),
+      accuracy: geo.accuracy ? Number(geo.accuracy) : undefined,
+    };
+  }
+
+  // 9. Create Report
   const report = await Report.create({
     orgId: org._id,
     type,
@@ -100,11 +113,23 @@ export async function createReport(org, user, payload, fileBuffer = null) {
     occurredFrom: fromDate,
     occurredTo: toDate,
     photo,
+    geo: geoCoordinates,
     privateDetails: processedPrivateDetails,
     expiresAt,
   });
 
-  return publicView(report, categoryConfig);
+  // 10. Run deterministic inline matching engine
+  let matches = [];
+  try {
+    matches = await runMatchingForReport(report, org);
+  } catch (err) {
+    console.error('Matching engine inline run failed:', err);
+  }
+
+  return {
+    report: publicView(report, categoryConfig, org.locations),
+    matches,
+  };
 }
 
 export async function getMyReports(orgId, userId, org) {
@@ -112,15 +137,29 @@ export async function getMyReports(orgId, userId, org) {
 
   return reports.map((r) => {
     const cat = org.categories.find((c) => c.key === r.category);
-    return publicView(r, cat);
+    return publicView(r, cat, org.locations);
   });
 }
 
-export async function getPublishedFoundReports(orgId, filters = {}, org) {
+export async function getPublishedFoundReports(orgId, filters = {}, org, userRole = 'member') {
+  let targetStatus;
+  const isPrivileged = userRole === 'admin' || userRole === 'moderator';
+
+  if (isPrivileged && filters.status === 'pending_review') {
+    targetStatus = 'pending_review';
+  } else if (filters.status === 'published_only') {
+    targetStatus = 'published';
+  } else if (filters.status) {
+    targetStatus = filters.status;
+  } else {
+    // Default public feed: includes both 'published' and 'claim_pending' (so items do not vanish when claimed)
+    targetStatus = { $in: ['published', 'claim_pending'] };
+  }
+
   const query = {
     orgId,
     type: 'found',
-    status: 'published',
+    status: targetStatus,
     expiresAt: { $gt: new Date() },
   };
 
@@ -134,13 +173,58 @@ export async function getPublishedFoundReports(orgId, filters = {}, org) {
     query.colors = filters.color;
   }
 
+  // Text search query across title, description, and brand
+  if (filters.q && typeof filters.q === 'string' && filters.q.trim()) {
+    const term = filters.q.trim();
+    query.$or = [
+      { title: { $regex: term, $options: 'i' } },
+      { description: { $regex: term, $options: 'i' } },
+      { brand: { $regex: term, $options: 'i' } },
+      { locationNote: { $regex: term, $options: 'i' } },
+    ];
+  }
+
   const reports = await Report.find(query).sort({ occurredFrom: -1 }).limit(100);
 
   return reports.map((r) => {
     const cat = org.categories.find((c) => c.key === r.category);
-    return publicView(r, cat);
+    return publicView(r, cat, org.locations);
   });
 }
+
+export async function reviewReport(reportId, action, reviewerId, org) {
+  const report = await Report.findOne({ _id: reportId, orgId: org._id });
+  if (!report) {
+    throw new ApiError(404, 'REPORT_NOT_FOUND', 'Report not found');
+  }
+
+  if (report.status !== 'pending_review') {
+    throw new ApiError(400, 'INVALID_STATUS', `Report status is '${report.status}', not pending_review`);
+  }
+
+  if (action === 'approve') {
+    report.status = 'published';
+  } else if (action === 'reject') {
+    report.status = 'rejected';
+  } else {
+    throw new ApiError(400, 'INVALID_ACTION', 'Action must be approve or reject');
+  }
+
+  await report.save();
+
+  if (action === 'approve') {
+    try {
+      const { runMatchingForReport } = await import('../matching/matching.service.js');
+      await runMatchingForReport(report, org);
+    } catch (err) {
+      console.error('Matching on reviewed report failed:', err);
+    }
+  }
+
+  const cat = org.categories.find((c) => c.key === report.category);
+  return publicView(report, cat, org.locations);
+}
+
 
 export async function getReportById(orgId, reportId, user, role, org) {
   const isModOrAdmin = ['moderator', 'admin'].includes(role);
@@ -164,5 +248,26 @@ export async function getReportById(orgId, reportId, user, role, org) {
   }
 
   // Regular members see strictly serialized public view
-  return publicView(report, categoryConfig);
+  return publicView(report, categoryConfig, org.locations);
+}
+
+export async function updateReportStatus(orgId, reportId, user, role, toStatus, org) {
+  const report = await Report.findOne({ _id: reportId, orgId });
+  if (!report) {
+    throw new ApiError(404, 'REPORT_NOT_FOUND', 'Report not found');
+  }
+
+  const isReporter = report.reporterId.toString() === user._id.toString();
+  const isModOrAdmin = ['moderator', 'admin'].includes(role);
+
+  if (!isReporter && !isModOrAdmin) {
+    throw new ApiError(403, 'FORBIDDEN', 'You do not have permission to update this report status');
+  }
+
+  validateReportTransition(report.type, report.status, toStatus);
+  report.status = toStatus;
+  await report.save();
+
+  const categoryConfig = org.categories.find((c) => c.key === report.category);
+  return publicView(report, categoryConfig, org.locations);
 }

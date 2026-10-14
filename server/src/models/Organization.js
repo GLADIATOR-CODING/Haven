@@ -42,6 +42,7 @@ const organizationSchema = new mongoose.Schema(
       code: { type: String, unique: true, sparse: true, uppercase: true, trim: true },
       rotatedAt: { type: Date, default: Date.now },
     },
+    allowedDomains: [{ type: String, lowercase: true, trim: true }],
     categories: [categorySchema],
     locations: [locationSchema],
     claimPolicy: {
