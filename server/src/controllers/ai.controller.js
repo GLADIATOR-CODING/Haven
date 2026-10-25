@@ -24,7 +24,11 @@ export const analyzeImage = asyncHandler(async (req, res) => {
 });
 
 export const getAnalyticsDigest = asyncHandler(async (req, res) => {
-  const digest = await analyticsDigestService.generateAnalyticsDigest(req.org);
+  const isStaff = req.membership?.role === 'admin' || req.membership?.role === 'moderator';
+  const digest = await analyticsDigestService.generateAnalyticsDigest(req.org, {
+    isStaff,
+    userRole: req.membership?.role || 'member',
+  });
   res.status(200).json({ digest });
 });
 

@@ -200,6 +200,11 @@ export default function ReportFoundPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // Just-in-time Geolocation: prompt upon photo selection/shutter click
+    if (!draft.geo) {
+      handleCaptureGeo();
+    }
+
     setCompressing(true);
     setError(null);
     try {

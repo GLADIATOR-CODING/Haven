@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link, useSearchParams } from 'react-router-dom';
+import { useParams, Link, useSearchParams, useLocation } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
@@ -27,6 +27,20 @@ import {
   Package,
   AtSign,
   ShieldCheck,
+  Settings,
+  Trash2,
+  Edit3,
+  Sliders,
+  PlusCircle,
+  UserMinus,
+  ShieldAlert,
+  CheckSquare,
+  Square,
+  Flame,
+  BarChart3,
+  Lightbulb,
+  Layers,
+  Radio,
 } from 'lucide-react';
 
 export default function OrgHomePage() {
@@ -35,13 +49,21 @@ export default function OrgHomePage() {
   const isNewlyCreated = searchParams.get('created') === '1';
   const tabParam = searchParams.get('tab');
 
+  const location = useLocation();
+  const isSettingsRoute = location.pathname.endsWith('/settings');
+
   const { user, demoLogin, selectOrgSlug } = useAuth();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState(tabParam === 'claims' ? 'claims' : 'feed');
+  const [activeTab, setActiveTab] = useState(
+    isSettingsRoute ? 'settings' : tabParam === 'claims' ? 'claims' : tabParam === 'settings' ? 'settings' : tabParam === 'staff' ? 'staff' : 'feed'
+  );
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [copied, setCopied] = useState(false);
   const [switchingRole, setSwitchingRole] = useState(false);
   const [showDigestModal, setShowDigestModal] = useState(false);
+  const [digestSubTab, setDigestSubTab] = useState('trends');
+  const [barChartMode, setBarChartMode] = useState('categories'); // 'categories' | 'locations'
+  const [trendHoverIdx, setTrendHoverIdx] = useState(null);
   const [showStaffModal, setShowStaffModal] = useState(false);
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [applyReason, setApplyReason] = useState('');
@@ -60,6 +82,39 @@ export default function OrgHomePage() {
   const [savingDomains, setSavingDomains] = useState(false);
   const [domainsMsg, setDomainsMsg] = useState(null);
 
+  // Settings State
+  const [settingsPlaces, setSettingsPlaces] = useState([]);
+  const [settingsCategories, setSettingsCategories] = useState([]);
+  const [settingsHandover, setSettingsHandover] = useState('');
+  const [settingsName, setSettingsName] = useState('');
+  const [settingsSaving, setSettingsSaving] = useState(false);
+  const [settingsFeedback, setSettingsFeedback] = useState(null);
+
+  // New Place input states
+  const [newPlaceLabel, setNewPlaceLabel] = useState('');
+  const [newPlaceZone, setNewPlaceZone] = useState('main');
+
+  // New Category input states
+  const [newCatLabel, setNewCatLabel] = useState('');
+  const [newCatSensitive, setNewCatSensitive] = useState(false);
+  const [newCatAutoApprove, setNewCatAutoApprove] = useState(false);
+
+  const handleOpenStaffTab = () => {
+    setActiveTab('staff');
+    setTimeout(() => {
+      const el = document.getElementById('staff-roster-section');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+  };
+
+  const handleOpenSettingsTab = () => {
+    setActiveTab('settings');
+    setTimeout(() => {
+      const el = document.getElementById('settings-section');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+  };
+
   const {
     data: digestData,
     isLoading: digestLoading,
@@ -76,10 +131,12 @@ export default function OrgHomePage() {
   }, [slug, selectOrgSlug]);
 
   useEffect(() => {
-    if (tabParam) {
+    if (isSettingsRoute) {
+      setActiveTab('settings');
+    } else if (tabParam) {
       setActiveTab(tabParam);
     }
-  }, [tabParam]);
+  }, [isSettingsRoute, tabParam]);
 
   const {
     data: orgData,
@@ -172,7 +229,123 @@ export default function OrgHomePage() {
     if (orgData?.org?.allowedDomains) {
       setEditDomains(orgData.org.allowedDomains);
     }
-  }, [orgData?.org?.allowedDomains]);
+    if (orgData?.org) {
+      setSettingsPlaces(orgData.org.locations || []);
+      setSettingsCategories(orgData.org.categories || []);
+      setSettingsHandover(orgData.org.handoverInstructions || '');
+      setSettingsName(orgData.org.name || '');
+    }
+  }, [orgData?.org]);
+
+  const handleAddPlace = () => {
+    const label = newPlaceLabel.trim();
+    if (!label) return;
+    const key = label.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/(^_|_$)/g, '');
+    if (settingsPlaces.some((p) => p.key === key)) {
+      alert('A place with a similar name already exists.');
+      return;
+    }
+    setSettingsPlaces([...settingsPlaces, { key, label, zone: newPlaceZone.trim() || 'main' }]);
+    setNewPlaceLabel('');
+    setNewPlaceZone('main');
+  };
+
+  const handleRemovePlace = (keyToRemove) => {
+    if (settingsPlaces.length <= 1) {
+      alert('Workspace must have at least one physical location.');
+      return;
+    }
+    setSettingsPlaces(settingsPlaces.filter((p) => p.key !== keyToRemove));
+  };
+
+  const handleAddCategory = () => {
+    const label = newCatLabel.trim();
+    if (!label) return;
+    const key = label.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/(^_|_$)/g, '');
+    if (settingsCategories.some((c) => c.key === key)) {
+      alert('A category with a similar name already exists.');
+      return;
+    }
+    setSettingsCategories([
+      ...settingsCategories,
+      {
+        key,
+        label,
+        icon: 'package',
+        keywords: [label.toLowerCase()],
+        sensitive: newCatSensitive,
+        autoApproveClaims: newCatAutoApprove,
+        verificationPrompts: newCatSensitive
+          ? [{ key: 'identifier_note', label: 'Identifying marks / unique details', kind: 'text', required: true }]
+          : [],
+      },
+    ]);
+    setNewCatLabel('');
+    setNewCatSensitive(false);
+    setNewCatAutoApprove(false);
+  };
+
+  const handleToggleCategorySensitive = (key) => {
+    setSettingsCategories(
+      settingsCategories.map((c) =>
+        c.key === key
+          ? {
+              ...c,
+              sensitive: !c.sensitive,
+              autoApproveClaims: !c.sensitive ? false : c.autoApproveClaims,
+              verificationPrompts: !c.sensitive
+                ? [{ key: 'identifier_note', label: 'Identifying marks / unique details', kind: 'text', required: true }]
+                : [],
+            }
+          : c
+      )
+    );
+  };
+
+  const handleToggleCategoryAutoApprove = (key) => {
+    setSettingsCategories(
+      settingsCategories.map((c) =>
+        c.key === key
+          ? {
+              ...c,
+              autoApproveClaims: !c.autoApproveClaims,
+              sensitive: !c.autoApproveClaims ? false : c.sensitive,
+            }
+          : c
+      )
+    );
+  };
+
+  const handleRemoveCategory = (keyToRemove) => {
+    if (settingsCategories.length <= 1) {
+      alert('Workspace must have at least one item category.');
+      return;
+    }
+    setSettingsCategories(settingsCategories.filter((c) => c.key !== keyToRemove));
+  };
+
+  const handleSaveAllSettings = async () => {
+    setSettingsSaving(true);
+    setSettingsFeedback(null);
+    try {
+      await api.patch(`/api/o/${slug}`, {
+        name: settingsName.trim() || org.name,
+        handoverInstructions: settingsHandover.trim() || org.handoverInstructions,
+        locations: settingsPlaces,
+        categories: settingsCategories,
+        allowedDomains: editDomains,
+      });
+      await refetchOrg();
+      queryClient.invalidateQueries({ queryKey: ['orgConfig', slug] });
+      queryClient.invalidateQueries({ queryKey: ['foundFeed'] });
+      setSettingsFeedback({ type: 'success', text: 'All workspace settings (places, items, emails) saved successfully!' });
+      setTimeout(() => setSettingsFeedback(null), 4000);
+    } catch (err) {
+      setSettingsFeedback({ type: 'error', text: err.message || 'Failed to save settings' });
+    } finally {
+      setSettingsSaving(false);
+    }
+  };
 
   const handleAddDomainToOrg = () => {
     const clean = newDomainInput.trim().replace(/^@/, '').toLowerCase();
@@ -495,6 +668,22 @@ export default function OrgHomePage() {
           {currentRole === 'admin' && (
             <button
               type="button"
+              onClick={handleOpenSettingsTab}
+              className={`p-3 sm:px-3.5 sm:py-3 rounded-xl border text-xs font-semibold flex items-center gap-2 transition-all shadow-xs ${
+                activeTab === 'settings'
+                  ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 border-neutral-900 dark:border-white'
+                  : 'border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:border-red-500/50 hover:bg-red-500/10 text-[var(--text-primary)]'
+              }`}
+              title="Workspace Settings (Places, Items, Emails)"
+            >
+              <Settings className="w-4 h-4 text-red-500 shrink-0" />
+              <span className="hidden sm:inline">Workspace Settings</span>
+            </button>
+          )}
+
+          {currentRole === 'admin' && (
+            <button
+              type="button"
               onClick={() => setShowStaffModal(true)}
               className="p-3 sm:px-3.5 sm:py-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:border-amber-500/50 hover:bg-amber-500/10 text-xs font-semibold text-[var(--text-primary)] flex items-center gap-2 transition-all shadow-xs relative"
               title="Review Moderator Requests"
@@ -511,12 +700,17 @@ export default function OrgHomePage() {
 
           <button
             type="button"
-            onClick={() => setShowDigestModal(true)}
+            onClick={() => {
+              setDigestSubTab('trends');
+              setShowDigestModal(true);
+            }}
             className="p-3 sm:px-3.5 sm:py-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:border-emerald-500/50 hover:bg-emerald-500/10 text-xs font-semibold text-[var(--text-primary)] flex items-center gap-2 transition-all shadow-xs"
-            title="View AI Operations Digest"
+            title={isPrivileged ? 'View AI Operations & Trends Digest' : 'View Lost & Found Activity Trends'}
           >
-            <Sparkles className="w-4 h-4 text-emerald-500 shrink-0" />
-            <span className="hidden sm:inline">AI Operations Digest</span>
+            {isPrivileged ? <Sparkles className="w-4 h-4 text-emerald-500 shrink-0" /> : <TrendingUp className="w-4 h-4 text-emerald-500 shrink-0" />}
+            <span className="hidden sm:inline">
+              {isPrivileged ? 'AI Operations Digest' : 'Activity & Trends'}
+            </span>
           </button>
 
           {/* Admin Access Code Box - Strictly Displayed for Workspace Admins */}
@@ -577,7 +771,7 @@ export default function OrgHomePage() {
                   </div>
                 </div>
                 <button
-                  onClick={() => setActiveTab('staff')}
+                  onClick={handleOpenStaffTab}
                   className="text-xs text-amber-500 hover:underline font-semibold"
                 >
                   Manage Roster &amp; History →
@@ -655,7 +849,7 @@ export default function OrgHomePage() {
 
               <div className="flex items-center gap-2 self-start sm:self-auto">
                 <button
-                  onClick={() => setActiveTab('staff')}
+                  onClick={handleOpenStaffTab}
                   className="px-3.5 py-1.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card)] hover:border-[var(--border-strong)] text-xs font-semibold text-[var(--text-primary)] flex items-center gap-1.5 transition-colors shadow-xs"
                 >
                   <Users className="w-3.5 h-3.5 text-amber-500" />
@@ -898,6 +1092,21 @@ export default function OrgHomePage() {
             </button>
           )}
 
+          {currentRole === 'admin' && (
+            <button
+              onClick={() => setActiveTab('settings')}
+              className={`pb-2.5 transition-colors flex items-center gap-2 border-b-2 ${activeTab === 'settings'
+                ? 'border-red-500 text-red-500 dark:border-red-400 dark:text-red-400 font-bold'
+                : 'border-transparent text-[var(--text-muted)] hover:text-red-500'
+                }`}
+            >
+              <span className="flex items-center gap-1.5">
+                <Settings className="w-3.5 h-3.5 text-red-500" />
+                <span>Workspace Settings</span>
+              </span>
+            </button>
+          )}
+
           <button
             onClick={() => setActiveTab('claims')}
             className={`pb-2.5 transition-colors flex items-center gap-2 border-b-2 ${activeTab === 'claims'
@@ -1099,13 +1308,20 @@ export default function OrgHomePage() {
                 <strong>Custody Desk Station:</strong> Review quarantined items, verify ownership claims on sensitive property, and perform physical code handovers.
               </span>
             </div>
-            <div className="flex items-center gap-1.5 self-start sm:self-auto font-mono text-[11px] font-bold">
+            <div className="flex items-center gap-2 self-start sm:self-auto font-mono text-[11px] font-bold">
               <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-600 dark:text-amber-400">
                 {pendingDeskClaims.length} Claims
               </span>
               <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400">
                 {reviewQueueData?.reports?.length || 0} Quarantined
               </span>
+              <Link
+                to={`/o/${slug}/moderation`}
+                className="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-bold flex items-center gap-1 transition-colors"
+              >
+                <span>Desk Terminal</span>
+                <ArrowRight className="w-3 h-3" />
+              </Link>
             </div>
           </div>
 
@@ -1638,7 +1854,7 @@ export default function OrgHomePage() {
 
       {/* DESK STAFF & ROSTER TAB (Admin Only) */}
       {activeTab === 'staff' && currentRole === 'admin' && (
-        <div className="space-y-6">
+        <div id="staff-roster-section" className="space-y-6 scroll-mt-20">
           {/* Header & Access Code Card */}
           <div className="p-5 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] space-y-4 shadow-sm">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[var(--border-subtle)]">
@@ -1940,6 +2156,22 @@ export default function OrgHomePage() {
                           <option value="admin">Admin</option>
                         </select>
                       )}
+
+                      {!isSelf && m.role === 'moderator' && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (window.confirm(`Revoke moderator privileges for ${m.name || m.email}? They will return to standard member role.`)) {
+                              handleUpdateMemberRole(m.userId, 'member');
+                            }
+                          }}
+                          className="px-2.5 py-1 rounded text-xs font-semibold text-red-500 hover:bg-red-500/10 border border-red-500/20 hover:border-red-500/40 flex items-center gap-1 transition-colors"
+                          title="Demote to regular member"
+                        >
+                          <UserMinus className="w-3.5 h-3.5" />
+                          <span>Remove Moderator</span>
+                        </button>
+                      )}
                     </div>
                   </div>
                 );
@@ -1949,138 +2181,1290 @@ export default function OrgHomePage() {
         </div>
       )}
 
-
-      {/* AI Operations Digest Modal */}
-      {showDigestModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-[var(--bg-card)] border border-[var(--border-subtle)] rounded-2xl max-w-2xl w-full p-5 sm:p-7 space-y-5 shadow-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-3 border-b border-[var(--border-subtle)]">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
-                  <Sparkles className="w-4 h-4" />
+      {/* 5. WORKSPACE SETTINGS TAB (Admin Only) */}
+      {activeTab === 'settings' && currentRole === 'admin' && (
+        <div id="settings-section" className="space-y-6 scroll-mt-20">
+          {/* Header Card */}
+          <div className="p-5 sm:p-6 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] shadow-sm space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[var(--border-subtle)]">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-red-500/10 text-red-500 flex items-center justify-center">
+                  <Sliders className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-[var(--text-primary)] flex items-center gap-2">
-                    <span>Operations Intelligence Digest</span>
-                    <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                      GEMINI 1.5 FLASH
+                  <h3 className="text-sm font-bold text-[var(--text-primary)] font-mono uppercase tracking-wide flex items-center gap-2">
+                    <span>Workspace Governance Settings</span>
+                    <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-red-500/10 text-red-500 border border-red-500/20">
+                      ADMIN ONLY
                     </span>
                   </h3>
-                  <p className="text-[11px] text-[var(--text-secondary)]">
-                    Real-time operational recovery velocity and custody hotspots for {org.name}.
+                  <p className="text-xs text-[var(--text-secondary)]">
+                    Modify campus places, allowed item categories, and whitelist email domains accepted for {org.name}.
                   </p>
                 </div>
               </div>
+
               <button
-                onClick={() => setShowDigestModal(false)}
-                className="p-1 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                type="button"
+                onClick={handleSaveAllSettings}
+                disabled={settingsSaving}
+                className="self-start sm:self-auto px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-xs font-bold transition-all shadow-md flex items-center gap-2"
               >
-                <X className="w-4 h-4" />
+                {settingsSaving ? (
+                  <RotateCw className="w-4 h-4 animate-spin" />
+                ) : (
+                  <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />
+                )}
+                <span>{settingsSaving ? 'Saving Changes...' : 'Save Workspace Settings'}</span>
               </button>
             </div>
 
-            {digestLoading ? (
-              <div className="py-12 text-center space-y-2">
-                <Sparkles className="w-6 h-6 text-emerald-500 animate-spin mx-auto" />
-                <div className="text-xs font-mono text-[var(--text-secondary)]">
-                  SYNTHESIZING_WORKSPACE_INTELLIGENCE...
-                </div>
-              </div>
-            ) : digestData?.digest ? (
-              <div className="space-y-4">
-                {/* Headline Banner */}
-                <div className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/20">
-                  <div className="text-[10px] font-mono uppercase text-emerald-700 dark:text-emerald-400 tracking-wider">
-                    OPERATIONAL HEADLINE
-                  </div>
-                  <h4 className="text-base font-bold text-[var(--text-primary)] mt-1">
-                    {digestData.digest.headline}
-                  </h4>
-                </div>
-
-                {/* Key Metrics Grid */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                  <div className="p-3 rounded-lg bg-[var(--bg-subtle)] border border-[var(--border-subtle)] text-center">
-                    <div className="text-[10px] font-mono text-[var(--text-muted)] uppercase">Resolution Rate</div>
-                    <div className="text-lg font-black text-emerald-600 dark:text-emerald-400 mt-0.5">
-                      {digestData.digest.metrics?.resolutionRate || '0%'}
-                    </div>
-                  </div>
-                  <div className="p-3 rounded-lg bg-[var(--bg-subtle)] border border-[var(--border-subtle)] text-center">
-                    <div className="text-[10px] font-mono text-[var(--text-muted)] uppercase">Found Items</div>
-                    <div className="text-lg font-black text-[var(--text-primary)] mt-0.5">
-                      {digestData.digest.metrics?.totalFound || 0}
-                    </div>
-                  </div>
-                  <div className="p-3 rounded-lg bg-[var(--bg-subtle)] border border-[var(--border-subtle)] text-center">
-                    <div className="text-[10px] font-mono text-[var(--text-muted)] uppercase">Lost Queries</div>
-                    <div className="text-lg font-black text-[var(--text-primary)] mt-0.5">
-                      {digestData.digest.metrics?.totalLost || 0}
-                    </div>
-                  </div>
-                  <div className="p-3 rounded-lg bg-[var(--bg-subtle)] border border-[var(--border-subtle)] text-center">
-                    <div className="text-[10px] font-mono text-[var(--text-muted)] uppercase">Reunited</div>
-                    <div className="text-lg font-black text-emerald-600 dark:text-emerald-400 mt-0.5">
-                      {digestData.digest.metrics?.handedOverCount || 0}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Narrative Summary */}
-                <div className="space-y-1.5">
-                  <h5 className="text-xs font-bold text-[var(--text-primary)]">
-                    Operational Assessment
-                  </h5>
-                  <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
-                    {digestData.digest.summary}
-                  </p>
-                </div>
-
-                {/* Hotspots Analysis */}
-                {digestData.digest.hotspots && (
-                  <div className="space-y-1.5 p-3.5 rounded-lg bg-[var(--bg-subtle)] border border-[var(--border-subtle)]">
-                    <h5 className="text-xs font-bold text-[var(--text-primary)] flex items-center gap-1.5">
-                      <TrendingUp className="w-3.5 h-3.5 text-red-500" />
-                      <span>Physical Custody Hotspots</span>
-                    </h5>
-                    <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
-                      {digestData.digest.hotspots}
-                    </p>
-                  </div>
+            {settingsFeedback && (
+              <div
+                className={`p-3 rounded-xl text-xs font-medium flex items-center gap-2.5 ${
+                  settingsFeedback.type === 'success'
+                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                    : 'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20'
+                }`}
+              >
+                {settingsFeedback.type === 'success' ? (
+                  <CheckCircle2 className="w-4 h-4 shrink-0" />
+                ) : (
+                  <AlertCircle className="w-4 h-4 shrink-0" />
                 )}
-
-                {/* Desk Recommendations */}
-                {digestData.digest.recommendations?.length > 0 && (
-                  <div className="space-y-2">
-                    <h5 className="text-xs font-bold text-[var(--text-primary)]">
-                      Actionable Desk Recommendations
-                    </h5>
-                    <ul className="space-y-1.5">
-                      {digestData.digest.recommendations.map((rec, i) => (
-                        <li
-                          key={i}
-                          className="text-xs text-[var(--text-secondary)] flex items-start gap-2"
-                        >
-                          <span className="text-emerald-500 font-bold shrink-0">✓</span>
-                          <span>{rec}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="py-8 text-center text-xs text-[var(--text-secondary)]">
-                Unable to synthesize intelligence report.
+                <span>{settingsFeedback.text}</span>
               </div>
             )}
 
+            {/* General Workspace Info */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+              <div className="space-y-1.5">
+                <label className="text-xs font-mono font-bold uppercase text-[var(--text-muted)]">
+                  Workspace Name
+                </label>
+                <input
+                  type="text"
+                  value={settingsName}
+                  onChange={(e) => setSettingsName(e.target.value)}
+                  placeholder="e.g. Apex Tech University"
+                  className="w-full px-3.5 py-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-page)] text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--border-strong)]"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-mono font-bold uppercase text-[var(--text-muted)]">
+                  Physical Drop-off Desk Handover Location
+                </label>
+                <input
+                  type="text"
+                  value={settingsHandover}
+                  onChange={(e) => setSettingsHandover(e.target.value)}
+                  placeholder="e.g. Student Center Room 102 · Mon-Fri 9am-5pm"
+                  className="w-full px-3.5 py-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-page)] text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--border-strong)]"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* 1. Modify Places / Locations */}
+          <div className="p-5 sm:p-6 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] shadow-sm space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-[var(--border-subtle)]">
+              <div>
+                <div className="flex items-center gap-2 text-xs font-bold text-[var(--text-primary)] font-mono uppercase tracking-wide">
+                  <MapPin className="w-4 h-4 text-red-500" />
+                  <span>Workspace Places &amp; Physical Locations</span>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-neutral-900/10 dark:bg-white/10 text-[var(--text-primary)] border border-[var(--border-subtle)]">
+                    {settingsPlaces.length} LOCATIONS
+                  </span>
+                </div>
+                <p className="text-[11px] text-[var(--text-secondary)] mt-0.5">
+                  Locations available when members report found items or search for lost property in this workspace.
+                </p>
+              </div>
+            </div>
+
+            {/* List of current places */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
+              {settingsPlaces.map((place) => (
+                <div
+                  key={place.key}
+                  className="p-3 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] flex items-center justify-between gap-2 text-xs"
+                >
+                  <div className="flex items-center gap-2 truncate">
+                    <MapPin className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                    <div className="truncate">
+                      <div className="font-semibold text-[var(--text-primary)] truncate">{place.label}</div>
+                      <div className="text-[10px] text-[var(--text-muted)] font-mono">Zone: {place.zone || 'main'}</div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleRemovePlace(place.key)}
+                    className="p-1 hover:text-red-500 text-[var(--text-muted)] rounded transition-colors shrink-0"
+                    title={`Delete location ${place.label}`}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {/* Add new place form */}
+            <div className="p-3.5 rounded-xl bg-[var(--bg-page)] border border-dashed border-[var(--border-subtle)] space-y-3">
+              <div className="text-xs font-mono font-bold text-[var(--text-muted)] uppercase">
+                Add New Physical Place / Zone
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
+                <div className="sm:col-span-7">
+                  <input
+                    type="text"
+                    value={newPlaceLabel}
+                    onChange={(e) => setNewPlaceLabel(e.target.value)}
+                    placeholder="Place name (e.g. Science Complex, Library 2nd Floor, Food Court)"
+                    className="w-full px-3 py-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card)] text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--border-strong)]"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddPlace();
+                      }
+                    }}
+                  />
+                </div>
+                <div className="sm:col-span-3">
+                  <input
+                    type="text"
+                    value={newPlaceZone}
+                    onChange={(e) => setNewPlaceZone(e.target.value)}
+                    placeholder="Zone (e.g. academic, dining)"
+                    className="w-full px-3 py-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card)] text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--border-strong)]"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddPlace();
+                      }
+                    }}
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <button
+                    type="button"
+                    onClick={handleAddPlace}
+                    disabled={!newPlaceLabel.trim()}
+                    className="w-full h-full py-2 px-3 rounded-lg bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:hover:bg-neutral-200 text-white dark:text-neutral-900 text-xs font-semibold disabled:opacity-40 transition-colors flex items-center justify-center gap-1.5"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add Place</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 2. Modify Item Categories & Sensitivity / Auto-Approve Policies */}
+          <div className="p-5 sm:p-6 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] shadow-sm space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-[var(--border-subtle)]">
+              <div>
+                <div className="flex items-center gap-2 text-xs font-bold text-[var(--text-primary)] font-mono uppercase tracking-wide">
+                  <Package className="w-4 h-4 text-amber-500" />
+                  <span>Item Categories &amp; Verification Rules</span>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-neutral-900/10 dark:bg-white/10 text-[var(--text-primary)] border border-[var(--border-subtle)]">
+                    {settingsCategories.length} CATEGORIES
+                  </span>
+                </div>
+                <p className="text-[11px] text-[var(--text-secondary)] mt-0.5">
+                  Configure whether items in each category require staff verification or allow automated one-click claim approvals.
+                </p>
+              </div>
+            </div>
+
+            {/* List of current categories */}
+            <div className="divide-y divide-[var(--border-subtle)] border border-[var(--border-subtle)] rounded-xl overflow-hidden bg-[var(--bg-card)]">
+              {settingsCategories.map((cat) => (
+                <div
+                  key={cat.key}
+                  className="p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-[var(--bg-subtle)] flex items-center justify-center font-mono font-bold text-xs">
+                      <Package className="w-4 h-4 text-[var(--text-muted)]" />
+                    </div>
+                    <div>
+                      <div className="font-semibold text-[var(--text-primary)] text-sm">{cat.label}</div>
+                      <div className="text-[10px] text-[var(--text-muted)] font-mono">key: {cat.key}</div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    {/* Sensitive toggle button */}
+                    <button
+                      type="button"
+                      onClick={() => handleToggleCategorySensitive(cat.key)}
+                      className={`px-2.5 py-1 rounded-md text-[11px] font-mono font-semibold transition-colors flex items-center gap-1.5 border ${
+                        cat.sensitive
+                          ? 'bg-amber-500/15 text-amber-500 border-amber-500/30'
+                          : 'bg-[var(--bg-subtle)] text-[var(--text-muted)] border-[var(--border-subtle)] hover:text-[var(--text-primary)]'
+                      }`}
+                      title="Toggle sensitive quarantine requirement"
+                    >
+                      {cat.sensitive ? (
+                        <ShieldAlert className="w-3.5 h-3.5 text-amber-500" />
+                      ) : (
+                        <Shield className="w-3.5 h-3.5" />
+                      )}
+                      <span>{cat.sensitive ? 'Sensitive (Requires Review)' : 'Standard (Public Feed)'}</span>
+                    </button>
+
+                    {/* Auto-approve toggle button */}
+                    <button
+                      type="button"
+                      onClick={() => handleToggleCategoryAutoApprove(cat.key)}
+                      className={`px-2.5 py-1 rounded-md text-[11px] font-mono font-semibold transition-colors flex items-center gap-1.5 border ${
+                        cat.autoApproveClaims
+                          ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                          : 'bg-[var(--bg-subtle)] text-[var(--text-muted)] border-[var(--border-subtle)] hover:text-[var(--text-primary)]'
+                      }`}
+                      title="Toggle automated claim approval"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>{cat.autoApproveClaims ? 'Auto-Approve Claims' : 'Staff Review Claims'}</span>
+                    </button>
+
+                    {/* Delete button */}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveCategory(cat.key)}
+                      className="p-1.5 rounded-lg text-red-500 hover:bg-red-500/10 transition-colors"
+                      title={`Remove category ${cat.label}`}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Add new category form */}
+            <div className="p-3.5 rounded-xl bg-[var(--bg-page)] border border-dashed border-[var(--border-subtle)] space-y-3">
+              <div className="text-xs font-mono font-bold text-[var(--text-muted)] uppercase">
+                Add New Item Category
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
+                <div className="sm:col-span-5">
+                  <input
+                    type="text"
+                    value={newCatLabel}
+                    onChange={(e) => setNewCatLabel(e.target.value)}
+                    placeholder="Category name (e.g. Audio Gear, Bicycles, Documents)"
+                    className="w-full px-3 py-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card)] text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--border-strong)]"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddCategory();
+                      }
+                    }}
+                  />
+                </div>
+                <div className="sm:col-span-4 flex items-center gap-3">
+                  <label className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)] cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={newCatSensitive}
+                      onChange={(e) => setNewCatSensitive(e.target.checked)}
+                      className="rounded border-[var(--border-subtle)] text-red-600 focus:ring-0"
+                    />
+                    <span>Sensitive Item</span>
+                  </label>
+                  <label className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)] cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={newCatAutoApprove}
+                      onChange={(e) => setNewCatAutoApprove(e.target.checked)}
+                      className="rounded border-[var(--border-subtle)] text-emerald-600 focus:ring-0"
+                    />
+                    <span>Auto-Approve</span>
+                  </label>
+                </div>
+                <div className="sm:col-span-3">
+                  <button
+                    type="button"
+                    onClick={handleAddCategory}
+                    disabled={!newCatLabel.trim()}
+                    className="w-full py-2 px-3 rounded-lg bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:hover:bg-neutral-200 text-white dark:text-neutral-900 text-xs font-semibold disabled:opacity-40 transition-colors flex items-center justify-center gap-1.5"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add Category</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 3. Modify Accepted Email Domains (Whitelist) */}
+          <div className="p-5 sm:p-6 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] shadow-sm space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-[var(--border-subtle)]">
+              <div>
+                <div className="flex items-center gap-2 text-xs font-bold text-[var(--text-primary)] font-mono uppercase tracking-wide">
+                  <AtSign className="w-4 h-4 text-emerald-500" />
+                  <span>Accepted Member Email Domains</span>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                    {editDomains.length} WHITELISTED
+                  </span>
+                </div>
+                <p className="text-[11px] text-[var(--text-secondary)] mt-0.5">
+                  Users with these email domains can automatically join this workspace without an admin invite code.
+                </p>
+              </div>
+            </div>
+
+            {/* Domains Tags List */}
+            <div className="flex flex-wrap gap-2 min-h-[40px] p-3 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)]">
+              {editDomains.length === 0 ? (
+                <span className="text-xs text-[var(--text-muted)] italic">
+                  No domains restricted. Workspace is open to any verified email address.
+                </span>
+              ) : (
+                editDomains.map((dom) => (
+                  <span
+                    key={dom}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[var(--bg-card)] border border-[var(--border-subtle)] text-xs font-mono font-medium text-[var(--text-primary)] shadow-xs"
+                  >
+                    <span className="text-emerald-500 font-bold">@</span>
+                    <span>{dom}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveDomainFromOrg(dom)}
+                      className="p-0.5 hover:text-red-500 rounded transition-colors"
+                      title={`Remove ${dom}`}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))
+              )}
+            </div>
+
+            {/* Add Input & Suggestions */}
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <span className="absolute left-3 top-2.5 text-xs text-[var(--text-muted)] font-mono">@</span>
+                <input
+                  type="text"
+                  value={newDomainInput}
+                  onChange={(e) => setNewDomainInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddDomainToOrg();
+                    }
+                  }}
+                  placeholder="Enter domain (e.g. bits-pilani.ac.in, sst.scaler.com, org.edu)"
+                  className="w-full pl-7 pr-3 py-2 rounded-lg border border-[var(--border-subtle)] text-xs font-mono bg-[var(--bg-page)] text-[var(--text-primary)] focus:outline-none focus:border-[var(--border-strong)]"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={handleAddDomainToOrg}
+                disabled={!newDomainInput.trim()}
+                className="px-4 py-2 rounded-lg bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:hover:bg-neutral-200 disabled:opacity-40 text-white dark:text-neutral-900 text-xs font-semibold transition-colors flex items-center gap-1.5"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add Domain</span>
+              </button>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-[var(--text-muted)]">
+              <span>Quick add:</span>
+              {['bits-pilani.ac.in', 'sst.scaler.com', 'scaler.com', 'gmail.com'].map((sug) => (
+                <button
+                  key={sug}
+                  type="button"
+                  onClick={() => {
+                    if (!editDomains.includes(sug)) {
+                      setEditDomains([...editDomains, sug]);
+                    }
+                  }}
+                  disabled={editDomains.includes(sug)}
+                  className="px-2 py-0.5 rounded border border-[var(--border-subtle)] hover:border-emerald-500/50 hover:text-emerald-500 disabled:opacity-40 font-mono text-[10px] transition-colors"
+                >
+                  +{sug}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Sticky Bottom Save Action */}
+          <div className="p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] flex items-center justify-between shadow-md">
+            <div>
+              <div className="text-xs font-bold text-[var(--text-primary)]">Ready to commit workspace changes?</div>
+              <div className="text-[11px] text-[var(--text-secondary)]">All places, item categories, and email domains will update immediately.</div>
+            </div>
+            <button
+              type="button"
+              onClick={handleSaveAllSettings}
+              disabled={settingsSaving}
+              className="px-6 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-xs font-bold transition-all shadow-md flex items-center gap-2"
+            >
+              {settingsSaving ? (
+                <RotateCw className="w-4 h-4 animate-spin" />
+              ) : (
+                <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />
+              )}
+              <span>{settingsSaving ? 'Saving Changes...' : 'Save Workspace Settings'}</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+
+      {/* AI Operations Digest Modal */}
+      {showDigestModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5">
+          <div className="bg-[var(--bg-card)] border border-[var(--border-subtle)] rounded-2xl max-w-4xl w-full p-5 sm:p-7 space-y-6 shadow-2xl max-h-[92vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[var(--border-subtle)]">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center flex-shrink-0">
+                  {isPrivileged ? <Sparkles className="w-5 h-5" /> : <TrendingUp className="w-5 h-5" />}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-bold text-[var(--text-primary)]">
+                      {isPrivileged ? 'Operational Intelligence & Trends' : 'Lost & Found Activity Trends'}
+                    </h3>
+                    <span
+                      className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${
+                        isPrivileged
+                          ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+                          : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                      }`}
+                    >
+                      {isPrivileged ? 'STAFF & ADMIN VIEW · CONFIDENTIAL' : 'COMMUNITY VIEW'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-[var(--text-secondary)] mt-0.5">
+                    {isPrivileged
+                      ? `7-day activity velocity, spatial loss distribution, and facility asset protection protocols for ${org.name}.`
+                      : `Weekly lost & found activity, item trends, and tips for safeguarding belongings in ${org.name}.`}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 self-end sm:self-auto">
+                <button
+                  onClick={() => setShowDigestModal(false)}
+                  className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-subtle)] transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Sub-Tab Navigation Bar */}
+            <div className="flex items-center gap-2 border-b border-[var(--border-subtle)] pb-2 overflow-x-auto text-xs font-semibold">
+              <button
+                type="button"
+                onClick={() => setDigestSubTab('trends')}
+                className={`px-3.5 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors whitespace-nowrap ${
+                  digestSubTab === 'trends'
+                    ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 shadow-xs'
+                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-subtle)]'
+                }`}
+              >
+                {isPrivileged ? <BarChart3 className="w-3.5 h-3.5" /> : <TrendingUp className="w-3.5 h-3.5" />}
+                <span>{isPrivileged ? 'Visual Analytics & Trend Graphs' : 'Activity Trends & Charts'}</span>
+              </button>
+
+              {isPrivileged ? (
+                <button
+                  type="button"
+                  onClick={() => setDigestSubTab('playbook')}
+                  className={`px-3.5 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors whitespace-nowrap ${
+                    digestSubTab === 'playbook'
+                      ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 shadow-xs'
+                      : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-subtle)]'
+                  }`}
+                >
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <span>Asset Protection &amp; Safety Playbook</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setDigestSubTab('tips')}
+                  className={`px-3.5 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors whitespace-nowrap ${
+                    digestSubTab === 'tips'
+                      ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 shadow-xs'
+                      : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-subtle)]'
+                  }`}
+                >
+                  <Lightbulb className="w-3.5 h-3.5" />
+                  <span>Safe Campus Tips</span>
+                </button>
+              )}
+            </div>
+
+            {digestLoading ? (
+              <div className="py-20 text-center space-y-3">
+                <Sparkles className="w-8 h-8 text-emerald-500 animate-spin mx-auto" />
+                <div className="text-xs font-mono text-[var(--text-secondary)]">
+                  SYNTHESIZING_WORKSPACE_OPERATIONS_INTELLIGENCE...
+                </div>
+                <p className="text-[11px] text-[var(--text-muted)] max-w-sm mx-auto">
+                  Aggregating location distributions, loss frequencies, and formulating organizational safety playbooks.
+                </p>
+              </div>
+            ) : digestData?.digest ? (
+              (() => {
+                const digest = digestData.digest;
+                const metrics = digest.metrics || {};
+                const mostLostLoc = metrics.mostLostLocation || { label: 'Campus Central', lostCount: 0, percentOfLost: 0, zone: 'main' };
+                const mostLostCat = metrics.mostLostCategory || { label: 'General Property', lostCount: 0, percentOfLost: 0, sensitive: false };
+                const locationStats = metrics.locationStats || [];
+                const categoryStats = metrics.categoryStats || [];
+                const dailyTrend = metrics.dailyTrend || [];
+
+                // Render SVG Trend Line Chart
+                const renderTrendLineChart = () => {
+                  const data = dailyTrend.length > 0 ? dailyTrend : [
+                    { dayLabel: 'Mon', lostCount: 0, foundCount: 0 },
+                    { dayLabel: 'Tue', lostCount: 0, foundCount: 0 },
+                    { dayLabel: 'Wed', lostCount: 0, foundCount: 0 },
+                    { dayLabel: 'Thu', lostCount: 0, foundCount: 0 },
+                    { dayLabel: 'Fri', lostCount: 0, foundCount: 0 },
+                    { dayLabel: 'Sat', lostCount: 0, foundCount: 0 },
+                    { dayLabel: 'Sun', lostCount: 0, foundCount: 0 },
+                  ];
+
+                  const maxVal = Math.max(4, ...data.map((d) => Math.max(d.lostCount || 0, d.foundCount || 0)));
+                  const yTicks = [0, Math.ceil(maxVal * 0.33), Math.ceil(maxVal * 0.66), maxVal];
+
+                  const width = 640;
+                  const height = 210;
+                  const padLeft = 32;
+                  const padRight = 24;
+                  const padTop = 20;
+                  const padBottom = 32;
+                  const chartW = width - padLeft - padRight;
+                  const chartH = height - padTop - padBottom;
+
+                  const getX = (i) => padLeft + (i / Math.max(1, data.length - 1)) * chartW;
+                  const getY = (val) => padTop + chartH - ((val || 0) / maxVal) * chartH;
+
+                  const buildSmoothPath = (key) => {
+                    if (!data.length) return '';
+                    const points = data.map((d, i) => ({ x: getX(i), y: getY(d[key]) }));
+                    if (points.length === 1) return `M ${points[0].x} ${points[0].y}`;
+                    let p = `M ${points[0].x} ${points[0].y}`;
+                    for (let i = 0; i < points.length - 1; i++) {
+                      const p0 = points[i];
+                      const p1 = points[i + 1];
+                      const mx = (p0.x + p1.x) / 2;
+                      p += ` C ${mx} ${p0.y}, ${mx} ${p1.y}, ${p1.x} ${p1.y}`;
+                    }
+                    return p;
+                  };
+
+                  const buildAreaPath = (key) => {
+                    const line = buildSmoothPath(key);
+                    if (!line) return '';
+                    const lastX = getX(data.length - 1);
+                    const firstX = getX(0);
+                    const bottomY = padTop + chartH;
+                    return `${line} L ${lastX} ${bottomY} L ${firstX} ${bottomY} Z`;
+                  };
+
+                  const lostLine = buildSmoothPath('lostCount');
+                  const lostArea = buildAreaPath('lostCount');
+                  const foundLine = buildSmoothPath('foundCount');
+                  const foundArea = buildAreaPath('foundCount');
+
+                  const activePoint = trendHoverIdx !== null && data[trendHoverIdx] ? data[trendHoverIdx] : null;
+
+                  return (
+                    <div className="relative w-full overflow-hidden">
+                      <svg
+                        viewBox={`0 0 ${width} ${height}`}
+                        className="w-full h-auto overflow-visible select-none"
+                        onMouseLeave={() => setTrendHoverIdx(null)}
+                      >
+                        <defs>
+                          <linearGradient id="lostGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#EF4444" stopOpacity="0.2" />
+                            <stop offset="100%" stopColor="#EF4444" stopOpacity="0.0" />
+                          </linearGradient>
+                          <linearGradient id="foundGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#10B981" stopOpacity="0.2" />
+                            <stop offset="100%" stopColor="#10B981" stopOpacity="0.0" />
+                          </linearGradient>
+                        </defs>
+
+                        {/* Horizontal Grid lines */}
+                        {yTicks.map((tickVal, idx) => {
+                          const y = getY(tickVal);
+                          return (
+                            <g key={idx}>
+                              <line
+                                x1={padLeft}
+                                y1={y}
+                                x2={padLeft + chartW}
+                                y2={y}
+                                stroke="currentColor"
+                                strokeOpacity="0.12"
+                                strokeDasharray="3 3"
+                              />
+                              <text
+                                x={padLeft - 8}
+                                y={y + 3.5}
+                                textAnchor="end"
+                                className="fill-[var(--text-muted)] text-[10px] font-mono"
+                              >
+                                {tickVal}
+                              </text>
+                            </g>
+                          );
+                        })}
+
+                        {/* Area Fills */}
+                        <path d={lostArea} fill="url(#lostGrad)" />
+                        <path d={foundArea} fill="url(#foundGrad)" />
+
+                        {/* Lines */}
+                        <path
+                          d={lostLine}
+                          fill="none"
+                          stroke="#EF4444"
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                        <path
+                          d={foundLine}
+                          fill="none"
+                          stroke="#10B981"
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+
+                        {/* Hover guideline */}
+                        {trendHoverIdx !== null && (
+                          <line
+                            x1={getX(trendHoverIdx)}
+                            y1={padTop}
+                            x2={getX(trendHoverIdx)}
+                            y2={padTop + chartH}
+                            stroke="currentColor"
+                            strokeOpacity="0.3"
+                            strokeDasharray="2 2"
+                          />
+                        )}
+
+                        {/* Data points & X Labels */}
+                        {data.map((d, i) => {
+                          const x = getX(i);
+                          const lostY = getY(d.lostCount);
+                          const foundY = getY(d.foundCount);
+                          const isHovered = trendHoverIdx === i;
+
+                          return (
+                            <g key={i}>
+                              {/* Lost Point */}
+                              <circle
+                                cx={x}
+                                cy={lostY}
+                                r={isHovered ? 5.5 : 3.5}
+                                fill="#EF4444"
+                                stroke="var(--bg-card)"
+                                strokeWidth={isHovered ? 2 : 1.5}
+                                className="transition-all duration-150"
+                              />
+
+                              {/* Found Point */}
+                              <circle
+                                cx={x}
+                                cy={foundY}
+                                r={isHovered ? 5.5 : 3.5}
+                                fill="#10B981"
+                                stroke="var(--bg-card)"
+                                strokeWidth={isHovered ? 2 : 1.5}
+                                className="transition-all duration-150"
+                              />
+
+                              {/* X Axis Label */}
+                              <text
+                                x={x}
+                                y={padTop + chartH + 18}
+                                textAnchor="middle"
+                                className={`text-[10px] font-mono transition-colors ${
+                                  isHovered
+                                    ? 'fill-[var(--text-primary)] font-bold'
+                                    : 'fill-[var(--text-muted)]'
+                                }`}
+                              >
+                                {d.dayLabel}
+                              </text>
+
+                              {/* Mouse capture area */}
+                              <rect
+                                x={x - chartW / (data.length * 2)}
+                                y={padTop}
+                                width={chartW / Math.max(1, data.length)}
+                                height={chartH + 20}
+                                fill="transparent"
+                                onMouseEnter={() => setTrendHoverIdx(i)}
+                                className="cursor-pointer"
+                              />
+                            </g>
+                          );
+                        })}
+                      </svg>
+
+                      {/* Floating Tooltip */}
+                      {activePoint && (
+                        <div className="absolute top-2 left-1/2 -translate-x-1/2 pointer-events-none px-3 py-1.5 rounded-lg bg-[var(--bg-card)] border border-[var(--border-strong)] shadow-md text-[11px] font-mono flex items-center gap-3.5 z-10 animate-in fade-in zoom-in-95 duration-100">
+                          <span className="font-bold text-[var(--text-primary)]">
+                            {activePoint.fullLabel || activePoint.date}
+                          </span>
+                          <span className="text-red-500 font-semibold flex items-center gap-1">
+                            <span className="w-2 h-2 rounded-full bg-red-500 inline-block" />
+                            {activePoint.lostCount} Lost
+                          </span>
+                          <span className="text-emerald-500 font-semibold flex items-center gap-1">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+                            {activePoint.foundCount} Found
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                };
+
+                // Render SVG Grouped Column Bar Chart
+                const renderGroupedBarChart = (items) => {
+                  const displayItems = (items || []).slice(0, 5);
+                  if (!displayItems.length) {
+                    return (
+                      <div className="py-12 text-center text-xs text-[var(--text-muted)] italic">
+                        No records available for breakdown yet.
+                      </div>
+                    );
+                  }
+
+                  const maxVal = Math.max(3, ...displayItems.map((d) => Math.max(d.lostCount || 0, d.foundCount || 0)));
+                  const yTicks = [0, Math.ceil(maxVal * 0.5), maxVal];
+
+                  const width = 640;
+                  const height = 190;
+                  const padLeft = 32;
+                  const padRight = 20;
+                  const padTop = 22;
+                  const padBottom = 34;
+                  const chartW = width - padLeft - padRight;
+                  const chartH = height - padTop - padBottom;
+
+                  const groupWidth = chartW / displayItems.length;
+                  const barWidth = Math.min(22, Math.max(12, (groupWidth - 28) / 2));
+
+                  return (
+                    <div className="w-full overflow-hidden">
+                      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto overflow-visible select-none">
+                        {/* Horizontal Grid lines */}
+                        {yTicks.map((tickVal, idx) => {
+                          const y = padTop + chartH - (tickVal / maxVal) * chartH;
+                          return (
+                            <g key={idx}>
+                              <line
+                                x1={padLeft}
+                                y1={y}
+                                x2={padLeft + chartW}
+                                y2={y}
+                                stroke="currentColor"
+                                strokeOpacity="0.12"
+                                strokeDasharray="3 3"
+                              />
+                              <text
+                                x={padLeft - 8}
+                                y={y + 3.5}
+                                textAnchor="end"
+                                className="fill-[var(--text-muted)] text-[10px] font-mono"
+                              >
+                                {tickVal}
+                              </text>
+                            </g>
+                          );
+                        })}
+
+                        {/* Grouped Bars */}
+                        {displayItems.map((item, i) => {
+                          const groupCenterX = padLeft + i * groupWidth + groupWidth / 2;
+                          const lostBarHeight = ((item.lostCount || 0) / maxVal) * chartH;
+                          const foundBarHeight = ((item.foundCount || 0) / maxVal) * chartH;
+
+                          const lostX = groupCenterX - barWidth - 2;
+                          const foundX = groupCenterX + 2;
+
+                          const lostY = padTop + chartH - lostBarHeight;
+                          const foundY = padTop + chartH - foundBarHeight;
+
+                          return (
+                            <g key={item.key || i} className="group">
+                              {/* Lost Bar */}
+                              <rect
+                                x={lostX}
+                                y={lostY}
+                                width={barWidth}
+                                height={Math.max(2, lostBarHeight)}
+                                rx="3"
+                                className="fill-red-500 transition-all duration-300 hover:opacity-80"
+                              />
+                              {item.lostCount > 0 && (
+                                <text
+                                  x={lostX + barWidth / 2}
+                                  y={lostY - 4}
+                                  textAnchor="middle"
+                                  className="fill-red-500 font-mono text-[9px] font-bold"
+                                >
+                                  {item.lostCount}
+                                </text>
+                              )}
+
+                              {/* Found Bar */}
+                              <rect
+                                x={foundX}
+                                y={foundY}
+                                width={barWidth}
+                                height={Math.max(2, foundBarHeight)}
+                                rx="3"
+                                className="fill-emerald-500 transition-all duration-300 hover:opacity-80"
+                              />
+                              {item.foundCount > 0 && (
+                                <text
+                                  x={foundX + barWidth / 2}
+                                  y={foundY - 4}
+                                  textAnchor="middle"
+                                  className="fill-emerald-500 font-mono text-[9px] font-bold"
+                                >
+                                  {item.foundCount}
+                                </text>
+                              )}
+
+                              {/* Label */}
+                              <text
+                                x={groupCenterX}
+                                y={padTop + chartH + 16}
+                                textAnchor="middle"
+                                className="fill-[var(--text-secondary)] text-[10px] font-medium truncate"
+                              >
+                                {item.label && item.label.length > 14 ? item.label.slice(0, 12) + '…' : item.label}
+                              </text>
+                            </g>
+                          );
+                        })}
+                      </svg>
+                    </div>
+                  );
+                };
+
+                return (
+                  <div className="space-y-6">
+                    {/* TAB 1: VISUAL ANALYTICS & TRENDS */}
+                    {digestSubTab === 'trends' && (
+                      <div className="space-y-6">
+                        {/* Summary & Velocity Card */}
+                        <div className="p-4 sm:p-5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                          <div className="space-y-1">
+                            <div className="text-[10px] font-mono uppercase tracking-wider text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1.5">
+                              <Sparkles className="w-3.5 h-3.5" />
+                              <span>{isPrivileged ? 'OPERATIONAL ASSESSMENT' : 'COMMUNITY HIGHLIGHT'}</span>
+                            </div>
+                            <h4 className="text-sm sm:text-base font-extrabold text-[var(--text-primary)]">
+                              {digest.headline}
+                            </h4>
+                            <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+                              {digest.summary}
+                            </p>
+                          </div>
+
+                          <div className="shrink-0 flex items-center gap-3 p-3 rounded-xl bg-[var(--bg-card)] border border-[var(--border-subtle)]">
+                            <div className="text-center px-2">
+                              <div className="text-[10px] font-mono text-[var(--text-muted)] uppercase">Resolution Rate</div>
+                              <div className="text-xl font-black text-emerald-600 dark:text-emerald-400 mt-0.5">
+                                {metrics.resolutionRate || '0%'}
+                              </div>
+                            </div>
+                            <div className="h-8 w-px bg-[var(--border-subtle)]" />
+                            <div className="text-center px-2">
+                              <div className="text-[10px] font-mono text-[var(--text-muted)] uppercase">Total Reunited</div>
+                              <div className="text-xl font-black text-[var(--text-primary)] mt-0.5">
+                                {metrics.handedOverCount || 0}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* GRAPH 1: ACTUAL 7-DAY ACTIVITY TREND (DUAL LINE CHART) */}
+                        <div className="p-5 sm:p-6 rounded-2xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] space-y-4">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-[var(--border-subtle)]">
+                            <div>
+                              <h5 className="text-xs font-bold text-[var(--text-primary)] flex items-center gap-2 font-mono uppercase">
+                                <TrendingUp className="w-4 h-4 text-emerald-500" />
+                                <span>7-Day Activity Velocity Trend</span>
+                              </h5>
+                              <p className="text-[11px] text-[var(--text-secondary)] mt-0.5">
+                                Comparing daily lost item inquiries against reported and secured found property.
+                              </p>
+                            </div>
+
+                            {/* Chart Legend */}
+                            <div className="flex items-center gap-4 text-[11px] font-mono">
+                              <span className="flex items-center gap-1.5 font-semibold text-red-500">
+                                <span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block" />
+                                <span>Lost Reports ({metrics.totalLost || 0})</span>
+                              </span>
+                              <span className="flex items-center gap-1.5 font-semibold text-emerald-500">
+                                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" />
+                                <span>Found Items ({metrics.totalFound || 0})</span>
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Line Chart Component */}
+                          {renderTrendLineChart()}
+                        </div>
+
+                        {/* GRAPH 2: ACTUAL GROUPED BAR CHART (CATEGORIES OR LOCATIONS) */}
+                        <div className="p-5 sm:p-6 rounded-2xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] space-y-4">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[var(--border-subtle)]">
+                            <div>
+                              <h5 className="text-xs font-bold text-[var(--text-primary)] flex items-center gap-2 font-mono uppercase">
+                                <BarChart3 className="w-4 h-4 text-amber-500" />
+                                <span>Property Volume Distribution</span>
+                              </h5>
+                              <p className="text-[11px] text-[var(--text-secondary)] mt-0.5">
+                                Breakdown of lost vs. found volume across categories and facility spaces.
+                              </p>
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                              {/* Toggle Buttons */}
+                              <div className="flex items-center bg-[var(--bg-card)] border border-[var(--border-subtle)] rounded-lg p-0.5 text-xs font-semibold">
+                                <button
+                                  type="button"
+                                  onClick={() => setBarChartMode('categories')}
+                                  className={`px-2.5 py-1 rounded-md transition-colors ${
+                                    barChartMode === 'categories'
+                                      ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 shadow-xs'
+                                      : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+                                  }`}
+                                >
+                                  By Category
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setBarChartMode('locations')}
+                                  className={`px-2.5 py-1 rounded-md transition-colors ${
+                                    barChartMode === 'locations'
+                                      ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 shadow-xs'
+                                      : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+                                  }`}
+                                >
+                                  By Location
+                                </button>
+                              </div>
+
+                              <div className="hidden sm:flex items-center gap-3 text-[10px] font-mono">
+                                <span className="flex items-center gap-1.5 text-red-500 font-semibold">
+                                  <span className="w-2.5 h-2.5 rounded-sm bg-red-500" />
+                                  <span>Lost</span>
+                                </span>
+                                <span className="flex items-center gap-1.5 text-emerald-500 font-semibold">
+                                  <span className="w-2.5 h-2.5 rounded-sm bg-emerald-500" />
+                                  <span>Found</span>
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Render Bar Chart */}
+                          {renderGroupedBarChart(barChartMode === 'categories' ? categoryStats : locationStats)}
+                        </div>
+
+                        {/* Top Highlights Spotlight Cards */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {/* Card 1: #1 Loss Hotspot */}
+                          <div className="p-5 rounded-2xl border border-red-500/20 bg-red-500/5 space-y-3">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <span className="p-1.5 rounded-lg bg-red-500 text-white">
+                                  <Flame className="w-4 h-4" />
+                                </span>
+                                <div>
+                                  <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-red-600 dark:text-red-400">
+                                    #1 LOSS HOTSPOT
+                                  </div>
+                                  <div className="text-[10px] text-[var(--text-muted)] font-mono">
+                                    Place with the most lost queries
+                                  </div>
+                                </div>
+                              </div>
+                              <span className="text-[10px] font-mono font-black px-2 py-0.5 rounded bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30">
+                                {mostLostLoc.percentOfLost}% OF LOSSES
+                              </span>
+                            </div>
+
+                            <div>
+                              <div className="text-base font-extrabold text-[var(--text-primary)] flex items-center gap-1.5">
+                                <MapPin className="w-4 h-4 text-red-500 shrink-0" />
+                                <span>{mostLostLoc.label}</span>
+                              </div>
+                              <div className="text-[11px] text-[var(--text-secondary)] font-mono mt-0.5">
+                                {mostLostLoc.lostCount} lost items logged · Zone: {mostLostLoc.zone || 'main'}
+                              </div>
+                            </div>
+
+                            <p className="text-xs text-[var(--text-secondary)] leading-relaxed bg-[var(--bg-card)] p-3 rounded-xl border border-[var(--border-subtle)]">
+                              {digest.hotspotDeepDive?.whyProneToLoss ||
+                                `${mostLostLoc.label} accounts for high activity. Please check around your seating area before leaving.`}
+                            </p>
+
+                            {/* Staff Only Mitigation Instructions */}
+                            {isPrivileged && digest.hotspotDeepDive?.mitigationActions && (
+                              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-800 dark:text-amber-300 space-y-1">
+                                <div className="font-bold flex items-center gap-1 text-[11px] uppercase tracking-wider font-mono">
+                                  <Shield className="w-3.5 h-3.5" />
+                                  <span>Internal Staff Action</span>
+                                </div>
+                                <p className="leading-relaxed text-[11px]">
+                                  {digest.hotspotDeepDive.mitigationActions}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Card 2: #1 Most Lost Item */}
+                          <div className="p-5 rounded-2xl border border-amber-500/20 bg-amber-500/5 space-y-3">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <span className="p-1.5 rounded-lg bg-amber-500 text-black">
+                                  <Package className="w-4 h-4" />
+                                </span>
+                                <div>
+                                  <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                                    #1 MOST LOST ITEM
+                                  </div>
+                                  <div className="text-[10px] text-[var(--text-muted)] font-mono">
+                                    Highest frequency misplaced category
+                                  </div>
+                                </div>
+                              </div>
+                              <span className="text-[10px] font-mono font-black px-2 py-0.5 rounded bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                                {mostLostCat.percentOfLost}% OF LOSSES
+                              </span>
+                            </div>
+
+                            <div>
+                              <div className="text-base font-extrabold text-[var(--text-primary)] flex items-center gap-1.5">
+                                <Package className="w-4 h-4 text-amber-500 shrink-0" />
+                                <span>{mostLostCat.label}</span>
+                              </div>
+                              <div className="text-[11px] text-[var(--text-secondary)] font-mono mt-0.5">
+                                {mostLostCat.lostCount} lost reports · {mostLostCat.sensitive ? 'Sensitive Property' : 'Standard Belongings'}
+                              </div>
+                            </div>
+
+                            <p className="text-xs text-[var(--text-secondary)] leading-relaxed bg-[var(--bg-card)] p-3 rounded-xl border border-[var(--border-subtle)]">
+                              {digest.itemDeepDive?.vulnerabilityReason ||
+                                `${mostLostCat.label} is commonly misplaced during quick study or coffee breaks.`}
+                            </p>
+
+                            <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-800 dark:text-emerald-300 space-y-1">
+                              <div className="font-bold flex items-center gap-1 text-[11px] uppercase tracking-wider font-mono">
+                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                <span>Safeguarding Advice</span>
+                              </div>
+                              <p className="leading-relaxed text-[11px]">
+                                {digest.itemDeepDive?.preventionAdvice ||
+                                  'Add a distinctive keychain, sticker, or emergency contact lockscreen wallpaper.'}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* TAB 2: ASSET PROTECTION & SAFETY PLAYBOOK (STAFF ONLY) */}
+                    {isPrivileged && digestSubTab === 'playbook' && (
+                      <div className="space-y-6">
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <h5 className="text-xs font-bold text-[var(--text-primary)] flex items-center gap-2 font-mono uppercase">
+                              <Shield className="w-4 h-4 text-emerald-500" />
+                              <span>Internal Safety &amp; Asset Protection Protocols</span>
+                            </h5>
+                            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-500 font-bold">
+                              CONFIDENTIAL · STAFF ACCESS
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                            {(digest.safetyAndSecurityPlaybook || []).map((item, idx) => (
+                              <div
+                                key={idx}
+                                className="p-4 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] space-y-2.5 shadow-xs"
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span className="px-2 py-0.5 rounded text-[9px] font-mono font-bold uppercase bg-[var(--bg-card)] border border-[var(--border-subtle)] text-[var(--text-primary)]">
+                                    {item.category || 'Physical Security'}
+                                  </span>
+                                  <span
+                                    className={`px-2 py-0.5 rounded text-[9px] font-mono font-bold uppercase ${
+                                      item.impact === 'High'
+                                        ? 'bg-red-500/10 text-red-500 border border-red-500/20'
+                                        : 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
+                                    }`}
+                                  >
+                                    {item.impact || 'High'} Impact
+                                  </span>
+                                </div>
+
+                                <div className="font-bold text-xs text-[var(--text-primary)]">
+                                  {item.title}
+                                </div>
+
+                                <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+                                  {item.action}
+                                </p>
+
+                                {item.benefit && (
+                                  <div className="pt-2 border-t border-[var(--border-subtle)] text-[11px] text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1.5">
+                                    <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                                    <span>{item.benefit}</span>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Conversion Pipeline */}
+                        <div className="p-4 sm:p-5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] space-y-3">
+                          <h5 className="text-xs font-bold text-[var(--text-primary)] flex items-center gap-2 font-mono uppercase">
+                            <Layers className="w-4 h-4 text-emerald-500" />
+                            <span>Custody Lifecycle Conversion Pipeline</span>
+                          </h5>
+
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs">
+                            <div className="p-3 rounded-xl bg-[var(--bg-card)] border border-[var(--border-subtle)]">
+                              <div className="text-[10px] font-mono text-[var(--text-muted)] uppercase">1. Lost Queries</div>
+                              <div className="text-lg font-bold text-[var(--text-primary)] mt-1">{metrics.totalLost || 0}</div>
+                              <div className="text-[10px] text-[var(--text-secondary)] mt-0.5">Inquiries filed</div>
+                            </div>
+
+                            <div className="p-3 rounded-xl bg-[var(--bg-card)] border border-[var(--border-subtle)]">
+                              <div className="text-[10px] font-mono text-[var(--text-muted)] uppercase">2. Found Intake</div>
+                              <div className="text-lg font-bold text-[var(--text-primary)] mt-1">{metrics.totalFound || 0}</div>
+                              <div className="text-[10px] text-[var(--text-secondary)] mt-0.5">Secured at desk</div>
+                            </div>
+
+                            <div className="p-3 rounded-xl bg-[var(--bg-card)] border border-[var(--border-subtle)]">
+                              <div className="text-[10px] font-mono text-[var(--text-muted)] uppercase">3. Claims Submitted</div>
+                              <div className="text-lg font-bold text-amber-500 mt-1">{metrics.totalClaims || 0}</div>
+                              <div className="text-[10px] text-[var(--text-secondary)] mt-0.5">{metrics.approvedClaims || 0} approved</div>
+                            </div>
+
+                            <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
+                              <div className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold uppercase">4. Reunited</div>
+                              <div className="text-lg font-black text-emerald-600 dark:text-emerald-400 mt-1">{metrics.handedOverCount || 0}</div>
+                              <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold mt-0.5">{metrics.resolutionRate} velocity</div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* TAB 2: SAFE CAMPUS TIPS (MEMBERS ONLY) */}
+                    {!isPrivileged && digestSubTab === 'tips' && (
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                          <div className="p-4 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] space-y-2">
+                            <div className="flex items-center gap-2 font-bold text-xs text-[var(--text-primary)]">
+                              <span className="p-1 rounded bg-amber-500/10 text-amber-500">📱</span>
+                              <span>Emergency Lockscreen Wallpaper</span>
+                            </div>
+                            <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+                              Add an alternative email or friend's contact number on your smartphone lockscreen so finders can reach you immediately without unlocking.
+                            </p>
+                          </div>
+
+                          <div className="p-4 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] space-y-2">
+                            <div className="flex items-center gap-2 font-bold text-xs text-[var(--text-primary)]">
+                              <span className="p-1 rounded bg-emerald-500/10 text-emerald-500">🏷️</span>
+                              <span>Unique Identifiers &amp; Stickers</span>
+                            </div>
+                            <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+                              Common laptops, water bottles, and earbud cases look identical. A distinctive sticker or keychain expedites verification instantly.
+                            </p>
+                          </div>
+
+                          <div className="p-4 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] space-y-2">
+                            <div className="flex items-center gap-2 font-bold text-xs text-[var(--text-primary)]">
+                              <span className="p-1 rounded bg-blue-500/10 text-blue-500">📍</span>
+                              <span>Designated Drop-Off Desk</span>
+                            </div>
+                            <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+                              Found property is safely stored at: <strong>{org.handoverInstructions || 'the campus security desk'}</strong>. Turn in found items quickly to help fellow members.
+                            </p>
+                          </div>
+
+                          <div className="p-4 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] space-y-2">
+                            <div className="flex items-center gap-2 font-bold text-xs text-[var(--text-primary)]">
+                              <span className="p-1 rounded bg-purple-500/10 text-purple-500">🎒</span>
+                              <span>The "Look Back" Habit</span>
+                            </div>
+                            <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+                              Before leaving the cafeteria, library cubicles, or meeting rooms, take 3 seconds to look under the chair and table for chargers and cards.
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Community Broadcast Advice */}
+                        {digest.communityBroadcastTips?.length > 0 && (
+                          <div className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/20 space-y-2.5">
+                            <div className="flex items-center gap-2">
+                              <Radio className="w-4 h-4 text-emerald-500" />
+                              <div className="text-xs font-bold text-[var(--text-primary)] font-mono uppercase">
+                                Community Advice from Workspace Staff
+                              </div>
+                            </div>
+                            <ul className="space-y-2 text-xs text-[var(--text-secondary)]">
+                              {digest.communityBroadcastTips.map((tip, idx) => (
+                                <li key={idx} className="flex items-start gap-2">
+                                  <span className="text-emerald-500 font-bold shrink-0">📢</span>
+                                  <span className="leading-relaxed">{tip}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()
+            ) : (
+              <div className="py-12 text-center text-xs text-[var(--text-secondary)] space-y-2">
+                <AlertCircle className="w-8 h-8 text-[var(--text-muted)] mx-auto" />
+                <p>Unable to synthesize operational intelligence report.</p>
+              </div>
+            )}
+
+            {/* Modal Footer */}
             <div className="pt-3 border-t border-[var(--border-subtle)] flex items-center justify-between text-[11px] font-mono text-[var(--text-muted)]">
               <span>ZERO_LEAK_CONFIDENTIALITY_ENFORCED</span>
               <button
                 type="button"
                 onClick={() => setShowDigestModal(false)}
-                className="px-3.5 py-1.5 rounded-lg bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900 text-xs font-bold"
+                className="px-4 py-2 rounded-xl bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900 text-xs font-bold transition-colors"
               >
                 Close Digest
               </button>

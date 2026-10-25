@@ -1,5 +1,6 @@
 import { Claim } from '../../models/Claim.js';
 import { Report } from '../../models/Report.js';
+import { AuditLog } from '../../models/AuditLog.js';
 import { ApiError } from '../../utils/ApiError.js';
 import { evaluateClaimAnswers } from './verify.js';
 import { publicView } from '../reports/serializer.js';
@@ -169,6 +170,20 @@ export async function getClaimById(orgId, claimId, user, org) {
   };
 }
 
+/**
+ * Formats duration between date and now into concise age badge (e.g., '15m', '3h', '2d')
+ */
+export function formatWaitingAge(createdAt) {
+  if (!createdAt) return 'Waiting 0m';
+  const diffMs = Math.max(0, Date.now() - new Date(createdAt).getTime());
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 60) return `Waiting ${Math.max(1, mins)}m`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `Waiting ${hours}h`;
+  const days = Math.floor(hours / 24);
+  return `Waiting ${days}d`;
+}
+
 export async function getOrgClaims(orgId, filters = {}, org) {
   const query = { orgId };
   if (filters.status) {
@@ -176,34 +191,61 @@ export async function getOrgClaims(orgId, filters = {}, org) {
   }
 
   const claims = await Claim.find(query)
-    .populate('foundId')
+    .populate({
+      path: 'foundId',
+      select: '+privateDetails',
+    })
     .populate('claimantId', 'name email avatar')
     .sort({ createdAt: -1 });
 
-  return claims
-    .filter((c) => c.foundId)
-    .map((c) => {
-      const categoryConfig = org.categories?.find((cat) => cat.key === c.foundId.category);
-      return {
-        id: c._id,
-        status: c.status,
-        handoverCode: c.handoverCode,
-        handoverAttempts: c.handoverAttempts,
-        decisionNote: c.decisionNote,
-        createdAt: c.createdAt,
-        decidedAt: c.decidedAt,
-        answers: c.answers || [],
-        claimant: c.claimantId
-          ? {
-              id: c.claimantId._id,
-              name: c.claimantId.name,
-              email: c.claimantId.email,
-              avatar: c.claimantId.avatar,
-            }
-          : null,
-        foundItem: publicView(c.foundId, categoryConfig, org.locations),
-      };
-    });
+  // Priority sorting: Sensitive category items first, followed by oldest age
+  const validClaims = claims.filter((c) => c.foundId);
+  validClaims.sort((a, b) => {
+    const catA = org.categories?.find((c) => c.key === a.foundId?.category);
+    const catB = org.categories?.find((c) => c.key === b.foundId?.category);
+    const isSensA = catA?.sensitive || a.foundId?.isSensitive ? 1 : 0;
+    const isSensB = catB?.sensitive || b.foundId?.isSensitive ? 1 : 0;
+
+    if (isSensA !== isSensB) {
+      return isSensB - isSensA; // Sensitive first
+    }
+    // Oldest age first (ascending createdAt)
+    return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+  });
+
+  return validClaims.map((c) => {
+    const categoryConfig = org.categories?.find((cat) => cat.key === c.foundId.category);
+    const finderPrivateDetails = (c.foundId.privateDetails || []).map((p) => ({
+      key: p.key,
+      label: p.label || p.key,
+      kind: p.kind || 'text',
+      value: p.kind === 'secret' ? '•••••••• [Secret HMAC verified]' : p.value || '',
+    }));
+
+    return {
+      id: c._id,
+      status: c.status,
+      handoverCode: c.handoverCode,
+      handoverAttempts: c.handoverAttempts || 0,
+      decisionNote: c.decisionNote,
+      createdAt: c.createdAt,
+      decidedAt: c.decidedAt,
+      waitingAge: formatWaitingAge(c.createdAt),
+      waitingMinutes: Math.floor((Date.now() - new Date(c.createdAt).getTime()) / 60000),
+      answers: c.answers || [],
+      autoCheck: c.autoCheck || [],
+      finderPrivateDetails,
+      claimant: c.claimantId
+        ? {
+            id: c.claimantId._id,
+            name: c.claimantId.name,
+            email: c.claimantId.email,
+            avatar: c.claimantId.avatar,
+          }
+        : null,
+      foundItem: publicView(c.foundId, categoryConfig, org.locations),
+    };
+  });
 }
 
 export async function reviewClaim(orgId, claimId, moderatorUser, { action, decisionNote = '' }, org) {
@@ -224,6 +266,19 @@ export async function reviewClaim(orgId, claimId, moderatorUser, { action, decis
 
     // Ensure found report remains locked in claim_pending awaiting physical pickup
     await Report.findByIdAndUpdate(claim.foundId._id, { status: 'claim_pending' });
+
+    await AuditLog.create({
+      orgId,
+      actorId: moderatorUser._id,
+      action: 'CLAIM_APPROVED',
+      targetType: 'Claim',
+      targetId: claim._id,
+      meta: {
+        foundId: claim.foundId._id,
+        claimantId: claim.claimantId,
+        handoverCode: claim.handoverCode,
+      },
+    });
   } else if (action === 'reject') {
     claim.status = 'rejected';
     claim.moderatorId = moderatorUser._id;
@@ -233,8 +288,40 @@ export async function reviewClaim(orgId, claimId, moderatorUser, { action, decis
 
     // Release the report back to published so it reappears in feed for other claimants!
     await Report.findByIdAndUpdate(claim.foundId._id, { status: 'published' });
+
+    await AuditLog.create({
+      orgId,
+      actorId: moderatorUser._id,
+      action: 'CLAIM_REJECTED',
+      targetType: 'Claim',
+      targetId: claim._id,
+      meta: {
+        foundId: claim.foundId._id,
+        claimantId: claim.claimantId,
+        reason: claim.decisionNote,
+      },
+    });
+  } else if (action === 'request_info') {
+    claim.status = 'needs_info';
+    claim.moderatorId = moderatorUser._id;
+    claim.decidedAt = new Date();
+    claim.decisionNote = decisionNote || 'Additional clarification requested by desk moderator';
+    await claim.save();
+
+    await AuditLog.create({
+      orgId,
+      actorId: moderatorUser._id,
+      action: 'CLAIM_NEEDS_INFO',
+      targetType: 'Claim',
+      targetId: claim._id,
+      meta: {
+        foundId: claim.foundId._id,
+        claimantId: claim.claimantId,
+        note: claim.decisionNote,
+      },
+    });
   } else {
-    throw new ApiError(400, 'INVALID_ACTION', "Action must be 'approve' or 'reject'");
+    throw new ApiError(400, 'INVALID_ACTION', "Action must be 'approve', 'reject', or 'request_info'");
   }
 
   const categoryConfig = org.categories?.find((cat) => cat.key === claim.foundId.category);
@@ -271,14 +358,24 @@ export async function verifyHandover(orgId, payload, moderatorUser, org) {
 
   if (claim.handoverCode !== cleanCode) {
     claim.handoverAttempts = (claim.handoverAttempts || 0) + 1;
-    await claim.save();
     if (claim.handoverAttempts >= 5) {
       claim.status = 'rejected';
       claim.decisionNote = 'Locked: exceeded 5 invalid handover code attempts';
       await claim.save();
       await Report.findByIdAndUpdate(claim.foundId._id, { status: 'published' });
+
+      await AuditLog.create({
+        orgId,
+        actorId: moderatorUser._id,
+        action: 'HANDOVER_LOCKED_ABUSE',
+        targetType: 'Claim',
+        targetId: claim._id,
+        meta: { attempts: claim.handoverAttempts, foundId: claim.foundId._id },
+      });
+
       throw new ApiError(403, 'CODE_LOCKED', 'Handover code locked due to 5 failed attempts. Item released.');
     }
+    await claim.save();
     throw new ApiError(400, 'INVALID_CODE', `Invalid code. ${5 - claim.handoverAttempts} attempts remaining.`);
   }
 
@@ -290,6 +387,26 @@ export async function verifyHandover(orgId, payload, moderatorUser, org) {
   await claim.save();
 
   await Report.findByIdAndUpdate(claim.foundId._id, { status: 'handed_over' });
+
+  // Transition linked Lost Report to 'resolved'
+  if (claim.lostId) {
+    await Report.findByIdAndUpdate(claim.lostId, { status: 'resolved' });
+  }
+
+  // Immutable AuditLog entry
+  await AuditLog.create({
+    orgId,
+    actorId: moderatorUser._id,
+    action: 'HANDOVER_VERIFIED',
+    targetType: 'Claim',
+    targetId: claim._id,
+    meta: {
+      foundId: claim.foundId._id,
+      lostId: claim.lostId || null,
+      claimantId: claim.claimantId?._id || claim.claimantId,
+      handoverCode: cleanCode,
+    },
+  });
 
   const categoryConfig = org.categories?.find((cat) => cat.key === claim.foundId.category);
   return {

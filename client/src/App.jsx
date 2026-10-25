@@ -14,6 +14,7 @@ import ReportLostPage from './pages/ReportLostPage';
 import FoundFeedPage from './pages/FoundFeedPage';
 import ActivityPage from './pages/ActivityPage';
 import ClaimPage from './pages/ClaimPage';
+import ModeratorWorkspacePage from './pages/ModeratorWorkspacePage';
 import ProfilePage from './pages/ProfilePage';
 
 import {
@@ -422,8 +423,11 @@ export default function App() {
             <Route path="/create" element={<CreateOrgPage />} />
 
             <Route path="/o/:slug" element={<OrgHomePage />} />
+            <Route path="/o/:slug/settings" element={<OrgHomePage />} />
             <Route path="/o/:slug/feed" element={<FoundFeedPage />} />
             <Route path="/o/:slug/activity" element={<ActivityPage />} />
+            <Route path="/o/:slug/moderation" element={<ModeratorWorkspacePage />} />
+            <Route path="/o/:slug/moderation/handover" element={<ModeratorWorkspacePage initialTab="handover" />} />
             <Route path="/o/:slug/claim/:id" element={<ClaimPage />} />
             <Route path="/o/:slug/report/found" element={<ReportFoundPage />} />
             <Route path="/o/:slug/report/lost" element={<ReportLostPage />} />

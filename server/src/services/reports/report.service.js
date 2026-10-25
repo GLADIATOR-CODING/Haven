@@ -126,8 +126,10 @@ export async function createReport(org, user, payload, fileBuffer = null) {
     console.error('Matching engine inline run failed:', err);
   }
 
+  const serialized = publicView(report, categoryConfig, org.locations);
   return {
-    report: publicView(report, categoryConfig, org.locations),
+    ...serialized,
+    report: serialized,
     matches,
   };
 }

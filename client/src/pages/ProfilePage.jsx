@@ -158,7 +158,7 @@ export default function ProfilePage() {
 
   const handleSignOut = async () => {
     await logout();
-    navigate('/login');
+    navigate('/');
   };
 
   if (!user) {
@@ -248,6 +248,17 @@ export default function ProfilePage() {
                 <span>Workspaces:</span>
                 <span className="font-mono font-bold text-[var(--text-primary)]">{memberships.length}</span>
               </div>
+            </div>
+
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={handleSignOut}
+                className="w-full py-2 px-3 rounded-lg border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-500 text-xs font-semibold flex items-center justify-center gap-2 transition-colors"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Sign Out of Account</span>
+              </button>
             </div>
           </div>
         </div>

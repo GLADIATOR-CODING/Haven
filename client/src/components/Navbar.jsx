@@ -9,7 +9,6 @@ import {
   ChevronDown,
   Plus,
   KeyRound,
-  LogOut,
   Sun,
   Moon,
   Check,
@@ -87,7 +86,7 @@ export default function Navbar() {
 
   const handleLogout = async () => {
     await logout();
-    navigate('/login');
+    navigate('/');
   };
 
   const currentPath = location.pathname;
@@ -219,6 +218,21 @@ export default function Navbar() {
                 )}
                 <span>Activity</span>
               </Link>
+              {['admin', 'moderator'].includes(currentWorkspaceRole) && (
+                <Link
+                  to={`/o/${activeSlug}/moderation`}
+                  className={`transition-colors flex items-center gap-1.5 ${
+                    currentPath.includes('/moderation')
+                      ? 'text-white font-bold'
+                      : 'text-neutral-400 hover:text-white'
+                  }`}
+                >
+                  {currentPath.includes('/moderation') && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                  )}
+                  <span>Moderation</span>
+                </Link>
+              )}
             </>
           ) : (
             <>
@@ -349,14 +363,6 @@ export default function Navbar() {
                   </span>
                 )}
               </Link>
-
-              <button
-                onClick={handleLogout}
-                title="Sign out"
-                className="w-8 h-8 rounded-full bg-neutral-900 hover:bg-red-950/50 border border-neutral-800 hover:border-red-800 text-neutral-400 hover:text-red-400 flex items-center justify-center transition-colors"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-              </button>
             </div>
           ) : (
             <Link

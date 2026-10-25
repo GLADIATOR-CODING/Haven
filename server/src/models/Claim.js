@@ -74,8 +74,16 @@ const claimSchema = new mongoose.Schema(
   }
 );
 
-// Compound index for active claims by claimant
-claimSchema.index({ orgId: 1, foundId: 1, claimantId: 1 });
+// Unique partial index for active claims by claimant to prevent duplicate concurrent claims
+claimSchema.index(
+  { orgId: 1, foundId: 1, claimantId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      status: { $in: ['submitted', 'needs_info', 'approved'] },
+    },
+  }
+);
 claimSchema.index({ orgId: 1, status: 1, createdAt: -1 });
 
 export const Claim = mongoose.model('Claim', claimSchema);

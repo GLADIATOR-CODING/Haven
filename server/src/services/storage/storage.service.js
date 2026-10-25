@@ -43,34 +43,52 @@ export async function processAndSaveImage(fileBuffer, originalName = 'photo.jpg'
 
     const filename = `${crypto.randomBytes(16).toString('hex')}.jpg`;
 
-    // If Cloudinary configured in production
-    if (
-      env.CLOUDINARY_CLOUD_NAME &&
-      env.CLOUDINARY_CLOUD_NAME !== 'demo' &&
-      env.CLOUDINARY_API_KEY &&
-      env.CLOUDINARY_API_KEY !== 'demo'
-    ) {
-      // Direct Cloudinary upload
-      const cloudinary = (await import('cloudinary')).v2;
-      cloudinary.config({
-        cloud_name: env.CLOUDINARY_CLOUD_NAME,
-        api_key: env.CLOUDINARY_API_KEY,
-        api_secret: env.CLOUDINARY_API_SECRET,
-      });
+    // If Cloudinary configured in environment
+    const cloudName = env.CLOUDINARY_CLOUD_NAME?.replace(/["']/g, '').trim();
+    const apiKey = String(env.CLOUDINARY_API_KEY || '').replace(/["']/g, '').trim();
+    const apiSecret = env.CLOUDINARY_API_SECRET?.replace(/["']/g, '').trim();
 
-      return new Promise((resolve, reject) => {
-        const uploadStream = cloudinary.uploader.upload_stream(
-          { folder: 'haven_reports', resource_type: 'image' },
-          (error, result) => {
-            if (error) return reject(new ApiError(500, 'UPLOAD_FAILED', error.message));
-            resolve({
-              url: result.secure_url,
-              publicId: result.public_id,
-            });
-          }
-        );
-        uploadStream.end(processedBuffer);
-      });
+    if (
+      cloudName &&
+      cloudName !== 'demo' &&
+      apiKey &&
+      apiKey !== 'demo' &&
+      apiSecret &&
+      apiSecret !== 'demo'
+    ) {
+      try {
+        const timestamp = Math.floor(Date.now() / 1000);
+        const folder = 'haven_reports';
+        const stringToSign = `folder=${folder}&timestamp=${timestamp}${apiSecret}`;
+        const signature = crypto.createHash('sha1').update(stringToSign).digest('hex');
+
+        const formData = new FormData();
+        const base64Data = `data:image/jpeg;base64,${processedBuffer.toString('base64')}`;
+        formData.append('file', base64Data);
+        formData.append('api_key', apiKey);
+        formData.append('timestamp', timestamp.toString());
+        formData.append('folder', folder);
+        formData.append('signature', signature);
+
+        const uploadUrl = `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`;
+        const res = await fetch(uploadUrl, {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          return {
+            url: data.secure_url,
+            publicId: data.public_id,
+          };
+        } else {
+          const errText = await res.text();
+          console.warn('Cloudinary upload returned non-200, falling back to local storage:', errText);
+        }
+      } catch (cldErr) {
+        console.warn('Cloudinary upload network error, falling back to local storage:', cldErr.message);
+      }
     }
 
     // Local disk fallback (served via /uploads)

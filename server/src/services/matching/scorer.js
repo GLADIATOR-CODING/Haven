@@ -190,7 +190,20 @@ export function computeColorsBrandScore(lostReport, foundReport) {
 }
 
 /**
- * Helper: Tokenize text, remove punctuation, lower case, remove stop words.
+ * Helper: Light English stemming for common inflections (plurals, verb endings).
+ */
+function lightStem(word) {
+  if (!word || word.length <= 3) return word;
+  if (word.endsWith('ies') && word.length > 4) return word.slice(0, -3) + 'y';
+  if (word.endsWith('es') && word.length > 4) return word.slice(0, -2);
+  if (word.endsWith('s') && !word.endsWith('ss')) return word.slice(0, -1);
+  if (word.endsWith('ing') && word.length > 5) return word.slice(0, -3);
+  if (word.endsWith('ed') && word.length > 4) return word.slice(0, -2);
+  return word;
+}
+
+/**
+ * Helper: Tokenize text, remove punctuation, lower case, remove stop words, apply light stemming.
  */
 function tokenize(text = '') {
   return text
@@ -198,7 +211,8 @@ function tokenize(text = '') {
     .replace(/[^a-z0-9\s]/g, ' ')
     .split(/\s+/)
     .map((w) => w.trim())
-    .filter((w) => w.length > 1 && !STOP_WORDS.has(w));
+    .filter((w) => w.length > 1 && !STOP_WORDS.has(w))
+    .map((w) => lightStem(w));
 }
 
 /**
@@ -248,7 +262,7 @@ export function computeTextScore(lostReport, foundReport, categoryKeywords = [])
   // Bonus if keywords from org category config match
   let keywordBonus = 0;
   if (Array.isArray(categoryKeywords) && categoryKeywords.length > 0) {
-    const kwSet = new Set(categoryKeywords.map((k) => k.toLowerCase()));
+    const kwSet = new Set(categoryKeywords.map((k) => lightStem(k.toLowerCase())));
     const kw1 = tokens1.some((t) => kwSet.has(t));
     const kw2 = tokens2.some((t) => kwSet.has(t));
     if (kw1 && kw2) {
