@@ -68,10 +68,11 @@ const authLimiter = rateLimit({
   },
 });
 
-// 6. Health check endpoint (for Vercel proxy & Render cold starts)
-app.get('/api/health', (req, res) => {
+// 6. Health check endpoint (for Vercel proxy, Render cold starts & monitoring)
+app.get(['/health', '/api/health'], (req, res) => {
   res.status(200).json({
     status: 'ok',
+    message: 'Server is running',
     timestamp: new Date().toISOString(),
     env: env.NODE_ENV,
   });

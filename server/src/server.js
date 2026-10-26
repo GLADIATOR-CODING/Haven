@@ -6,7 +6,7 @@ import { connectDB } from './config/db.js';
 async function bootstrap() {
   await connectDB();
 
-  const server = app.listen(env.PORT, () => {
+  const server = app.listen(env.PORT, '0.0.0.0', () => {
     console.log(`🚀 Haven server running in ${env.NODE_ENV} mode on port ${env.PORT}`);
     console.log(`📡 Health check available at http://localhost:${env.PORT}/api/health`);
   });
