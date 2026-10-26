@@ -111,10 +111,13 @@ export async function seedInternal() {
   ];
 
   for (const m of membershipsData) {
-    const existing = await Membership.findOne({ userId: m.userId, orgId: m.orgId });
-    if (!existing) {
-      await Membership.create(m);
-    }
+    // Reset canonical demo roles on every seed so test activity cannot leave
+    // the member persona promoted to moderator or admin.
+    await Membership.findOneAndUpdate(
+      { userId: m.userId, orgId: m.orgId },
+      { $set: { role: m.role } },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
   }
 
   // 6. Ensure Sample Reports for Campus Org

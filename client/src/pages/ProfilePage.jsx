@@ -78,16 +78,19 @@ export default function ProfilePage() {
   });
 
   const [processingAdminReqId, setProcessingAdminReqId] = useState(null);
+  const [adminActionFeedback, setAdminActionFeedback] = useState(null);
 
   const handleAdminReviewRequest = async (orgSlug, requestId, action) => {
     setProcessingAdminReqId(requestId);
+    setAdminActionFeedback(null);
     try {
       await api.patch(`/api/o/${orgSlug}/moderator-requests/${requestId}`, { action });
       await refetchAdminRequests();
       queryClient.invalidateQueries({ queryKey: ['orgModRequests'] });
       queryClient.invalidateQueries({ queryKey: ['orgConfig'] });
+      setAdminActionFeedback({ type: 'success', message: `Moderator request ${action === 'approve' ? 'approved' : 'declined'}.` });
     } catch (err) {
-      alert(err.message || 'Action failed');
+      setAdminActionFeedback({ type: 'error', message: err.message || 'Action failed' });
     } finally {
       setProcessingAdminReqId(null);
     }
@@ -176,7 +179,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-10 space-y-8">
+    <div className="max-w-5xl mx-auto px-5 sm:px-8 py-8 sm:py-12 space-y-10">
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[var(--border-subtle)]">
         <div>
@@ -200,6 +203,12 @@ export default function ProfilePage() {
           <span>Sign Out</span>
         </button>
       </div>
+
+      {adminActionFeedback && (
+        <div role="status" aria-live="polite" className={`rounded-xl border px-4 py-3 text-xs font-medium ${adminActionFeedback.type === 'success' ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300' : 'border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300'}`}>
+          {adminActionFeedback.message}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
         {/* Left Column: Personal Profile & Photo */}

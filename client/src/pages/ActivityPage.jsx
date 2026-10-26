@@ -191,7 +191,7 @@ export default function ActivityPage() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-10 space-y-8">
+    <div className="max-w-6xl mx-auto px-5 sm:px-8 py-8 sm:py-12 space-y-10">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[var(--border-subtle)]">
         <div className="space-y-1">
@@ -592,7 +592,7 @@ export default function ActivityPage() {
                             <span>Verification Handover Code</span>
                           </div>
                           <p className="text-[11px] text-[var(--text-secondary)]">
-                            Present this 6-digit code at the campus reception desk to complete pickup.
+                            Show this code to desk staff at {org?.handoverInstructions || 'the designated collection counter'} to complete pickup.
                           </p>
                         </div>
 

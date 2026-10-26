@@ -1,5 +1,6 @@
 # Documentation / Planning specs
-docs/
+docs/*
+!docs/ux-timing.md
 
 # Dependencies
 node_modules/

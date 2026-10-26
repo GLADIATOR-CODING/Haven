@@ -75,13 +75,19 @@ export const getReportMatches = asyncHandler(async (req, res) => {
     req.org._id,
     req.params.id,
     req.user,
+    req.membership.role,
     req.org
   );
   res.status(200).json({ matches });
 });
 
 export const dismissMatch = asyncHandler(async (req, res) => {
-  const match = await matchingService.dismissMatch(req.org._id, req.params.matchId);
+  const match = await matchingService.dismissMatch(
+    req.org._id,
+    req.params.matchId,
+    req.user,
+    req.membership.role
+  );
   res.status(200).json({ match });
 });
 

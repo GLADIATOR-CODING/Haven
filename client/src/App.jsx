@@ -89,7 +89,7 @@ function LandingPage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10 sm:py-16 space-y-12">
+    <div className="max-w-6xl mx-auto px-5 sm:px-8 py-12 sm:py-20 space-y-14">
       {/* Hero Section */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
         <div className="lg:col-span-7 space-y-4">
@@ -411,7 +411,7 @@ export default function App() {
 
         <Navbar />
 
-        <main className="flex-1 pt-2 sm:pt-4">
+        <main className="flex-1 pt-3 sm:pt-5">
           <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />

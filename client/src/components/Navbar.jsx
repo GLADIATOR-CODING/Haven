@@ -15,6 +15,12 @@ import {
   Building2,
   Search,
   Camera,
+  Bell,
+  CheckCheck,
+  Sparkles,
+  CheckCircle2,
+  XCircle,
+  Clock,
 } from 'lucide-react';
 
 export default function Navbar() {
@@ -24,8 +30,10 @@ export default function Navbar() {
   const location = useLocation();
   const [orgDropdownOpen, setOrgDropdownOpen] = useState(false);
   const [reportDropdownOpen, setReportDropdownOpen] = useState(false);
+  const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
   const reportDropdownRef = useRef(null);
+  const notifDropdownRef = useRef(null);
 
   // Extract route slug if on an /o/:slug route
   const routeMatch = location.pathname.match(/^\/o\/([^/]+)/);
@@ -48,6 +56,40 @@ export default function Navbar() {
     enabled: !!activeSlug,
     staleTime: 1000 * 60 * 5,
   });
+
+  const { data: notifData, refetch: refetchNotifs } = useQuery({
+    queryKey: ['notifications', activeSlug],
+    queryFn: () => api.get(`/api/o/${activeSlug}/notifications`),
+    enabled: !!user && !!activeSlug,
+    refetchInterval: 30000,
+  });
+
+  const unreadCount = notifData?.unreadCount || 0;
+  const notifications = notifData?.notifications || [];
+
+  const handleMarkAllRead = async () => {
+    try {
+      await api.post(`/api/o/${activeSlug}/notifications/mark-all-read`);
+      refetchNotifs();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleNotificationClick = async (notif) => {
+    try {
+      if (!notif.read) {
+        await api.patch(`/api/o/${activeSlug}/notifications/${notif._id}/read`);
+        refetchNotifs();
+      }
+      setNotifDropdownOpen(false);
+      if (notif.link) {
+        navigate(notif.link);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const activeMembership =
     memberships.find((m) => m.orgSlug === activeSlug) ||
@@ -73,6 +115,9 @@ export default function Navbar() {
       if (reportDropdownRef.current && !reportDropdownRef.current.contains(event.target)) {
         setReportDropdownOpen(false);
       }
+      if (notifDropdownRef.current && !notifDropdownRef.current.contains(event.target)) {
+        setNotifDropdownOpen(false);
+      }
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -92,10 +137,10 @@ export default function Navbar() {
   const currentPath = location.pathname;
 
   return (
-    <header className="sticky top-2 sm:top-5 z-50 px-3 sm:px-6 pointer-events-none">
-      <div className="max-w-5xl mx-auto pointer-events-auto rounded-full bg-black/90 dark:bg-black/95 text-white border border-neutral-800/80 shadow-[0_12px_40px_rgba(0,0,0,0.6)] backdrop-blur-xl px-3.5 sm:px-5 h-12 sm:h-14 flex items-center justify-between gap-3 sm:gap-6 transition-all">
+    <header className="sticky top-2 sm:top-5 z-50 px-3 sm:px-6 lg:px-8 pointer-events-none">
+      <div className="max-w-[90rem] mx-auto pointer-events-auto rounded-full bg-black/90 dark:bg-black/95 text-white border border-neutral-800/80 shadow-[0_12px_40px_rgba(0,0,0,0.6)] backdrop-blur-xl px-3.5 sm:px-6 lg:px-7 h-12 sm:h-16 flex items-center justify-between gap-3 sm:gap-5 lg:gap-8 transition-all">
         {/* Left: Brand & Workspace Selector */}
-        <div className="flex items-center gap-2.5 sm:gap-3 flex-shrink-0">
+        <div className="flex min-w-0 items-center gap-2.5 sm:gap-3 flex-shrink-0">
           <Link to="/" className="flex items-center gap-2 group">
             <div className="w-8 h-8 rounded-xl bg-neutral-900 border border-neutral-700/80 shadow-inner flex items-center justify-center text-white group-hover:scale-105 transition-transform">
               <Shield className="w-4 h-4 fill-white text-white" />
@@ -176,7 +221,7 @@ export default function Navbar() {
         </div>
 
         {/* Center: Clean Uncluttered Tabs */}
-        <nav className="hidden md:flex items-center gap-6 text-[13px] font-medium">
+        <nav className="hidden md:flex min-w-0 items-center justify-center gap-4 lg:gap-5 text-[13px] font-medium whitespace-nowrap">
           {activeSlug ? (
             <>
               <Link
@@ -219,19 +264,35 @@ export default function Navbar() {
                 <span>Activity</span>
               </Link>
               {['admin', 'moderator'].includes(currentWorkspaceRole) && (
-                <Link
-                  to={`/o/${activeSlug}/moderation`}
-                  className={`transition-colors flex items-center gap-1.5 ${
-                    currentPath.includes('/moderation')
-                      ? 'text-white font-bold'
-                      : 'text-neutral-400 hover:text-white'
-                  }`}
-                >
-                  {currentPath.includes('/moderation') && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-                  )}
-                  <span>Moderation</span>
-                </Link>
+                <>
+                  <Link
+                    to={`/o/${activeSlug}/moderation`}
+                    className={`transition-colors flex items-center gap-1.5 ${
+                      currentPath.includes('/moderation') && !currentPath.endsWith('/handover')
+                        ? 'text-white font-bold'
+                        : 'text-neutral-400 hover:text-white'
+                    }`}
+                  >
+                    {currentPath.includes('/moderation') && !currentPath.endsWith('/handover') && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                    )}
+                    <span>Moderation</span>
+                  </Link>
+                  <Link
+                    to={`/o/${activeSlug}/moderation/handover`}
+                    className={`hidden xl:flex transition-colors items-center gap-1.5 ${
+                      currentPath.endsWith('/moderation/handover')
+                        ? 'text-white font-bold'
+                        : 'text-neutral-400 hover:text-white'
+                    }`}
+                    title="Open the physical handover terminal"
+                  >
+                    {currentPath.endsWith('/moderation/handover') && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                    )}
+                    <span>Handover</span>
+                  </Link>
+                </>
               )}
             </>
           ) : (
@@ -263,7 +324,7 @@ export default function Navbar() {
         </nav>
 
         {/* Right: Consolidated Action & Controls */}
-        <div className="flex items-center gap-2 sm:gap-2.5 flex-shrink-0">
+          <div className="flex items-center gap-2 sm:gap-2.5 flex-shrink-0">
           {activeSlug ? (
             <div className="relative" ref={reportDropdownRef}>
               <button
@@ -317,6 +378,123 @@ export default function Navbar() {
             </Link>
           )}
 
+          {/* Notification Hub */}
+          {user && activeSlug && (
+            <div className="relative" ref={notifDropdownRef}>
+              <button
+                onClick={() => setNotifDropdownOpen((p) => !p)}
+                className="w-8 h-8 rounded-full bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300 hover:text-white flex items-center justify-center transition-colors relative"
+                title="Notifications & Custody Alerts"
+                aria-label="Notifications"
+              >
+                <Bell className="w-3.5 h-3.5" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 px-1.5 py-0.2 rounded-full bg-red-600 text-white text-[9px] font-mono font-black animate-pulse">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </button>
+
+              {notifDropdownOpen && (
+                <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-[#111111] border border-[#262626] rounded-2xl shadow-2xl p-3 z-50 backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150">
+                  <div className="flex items-center justify-between pb-2.5 mb-2 border-b border-[#262626]">
+                    <div className="flex items-center gap-2">
+                      <Bell className="w-4 h-4 text-red-500" />
+                      <span className="font-bold text-xs text-white">Notifications</span>
+                      {unreadCount > 0 && (
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-red-500/20 text-red-400 border border-red-500/30">
+                          {unreadCount} new
+                        </span>
+                      )}
+                    </div>
+                    {unreadCount > 0 && (
+                      <button
+                        onClick={handleMarkAllRead}
+                        className="text-[11px] text-neutral-400 hover:text-white flex items-center gap-1 transition-colors"
+                      >
+                        <CheckCheck className="w-3.5 h-3.5" />
+                        <span>Mark all read</span>
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="max-h-72 overflow-y-auto space-y-1.5 divide-y divide-[#1e1e1e]/60">
+                    {notifications.length === 0 ? (
+                      <div className="py-8 text-center text-xs text-neutral-400 space-y-1.5">
+                        <CheckCircle2 className="w-6 h-6 text-emerald-500/60 mx-auto" />
+                        <p className="font-medium text-white">All caught up!</p>
+                        <p className="text-[10px]">No pending custody or match notifications.</p>
+                      </div>
+                    ) : (
+                      notifications.map((n) => {
+                        const isMatch = n.type === 'match_found';
+                        const isApproved = n.type === 'claim_approved';
+                        const isRejected = n.type === 'claim_rejected';
+                        const isHandover = n.type === 'handover_ready';
+
+                        return (
+                          <div
+                            key={n._id}
+                            onClick={() => handleNotificationClick(n)}
+                            className={`p-2.5 rounded-xl transition-all cursor-pointer flex items-start gap-2.5 ${
+                              n.read
+                                ? 'opacity-70 hover:opacity-100 hover:bg-[#1a1a1a]'
+                                : 'bg-neutral-900/90 border border-neutral-800/80 hover:border-neutral-700'
+                            }`}
+                          >
+                            <div
+                              className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
+                                isMatch
+                                  ? 'bg-red-500/15 text-red-400'
+                                  : isApproved
+                                  ? 'bg-emerald-500/15 text-emerald-400'
+                                  : isRejected
+                                  ? 'bg-rose-500/15 text-rose-400'
+                                  : isHandover
+                                  ? 'bg-amber-500/15 text-amber-400'
+                                  : 'bg-blue-500/15 text-blue-400'
+                              }`}
+                            >
+                              {isMatch && <Sparkles className="w-3.5 h-3.5" />}
+                              {isApproved && <CheckCircle2 className="w-3.5 h-3.5" />}
+                              {isRejected && <XCircle className="w-3.5 h-3.5" />}
+                              {isHandover && <KeyRound className="w-3.5 h-3.5" />}
+                              {!isMatch && !isApproved && !isRejected && !isHandover && (
+                                <Bell className="w-3.5 h-3.5" />
+                              )}
+                            </div>
+
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between gap-1">
+                                <h4
+                                  className={`text-xs truncate ${
+                                    n.read ? 'font-medium text-neutral-300' : 'font-bold text-white'
+                                  }`}
+                                >
+                                  {n.title}
+                                </h4>
+                                {!n.read && (
+                                  <span className="w-2 h-2 rounded-full bg-red-500 shrink-0" />
+                                )}
+                              </div>
+                              <p className="text-[11px] text-neutral-400 line-clamp-2 mt-0.5 leading-relaxed">
+                                {n.message}
+                              </p>
+                              <div className="text-[9px] font-mono text-neutral-500 mt-1 flex items-center gap-1">
+                                <Clock className="w-2.5 h-2.5" />
+                                <span>{new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Theme Toggle Button */}
           <button
             onClick={toggleTheme}
@@ -333,10 +511,10 @@ export default function Navbar() {
 
           {/* User Account / Profile */}
           {user ? (
-            <div className="flex items-center gap-1.5 sm:gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
               <Link
                 to="/profile"
-                className="flex items-center gap-2 pl-1.5 pr-2.5 py-1 rounded-full bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-xs text-white transition-all group"
+                className="flex max-w-[172px] items-center gap-2 pl-1.5 pr-2.5 py-1.5 rounded-full bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-xs text-white transition-all group"
                 title="Account Dashboard & Roles"
               >
                 <div className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center text-[10px] font-bold overflow-hidden flex-shrink-0">
@@ -346,12 +524,12 @@ export default function Navbar() {
                     (user.name || 'U').charAt(0).toUpperCase()
                   )}
                 </div>
-                <span className="hidden sm:inline font-medium text-neutral-200 group-hover:text-white max-w-[110px] truncate">
+                  <span className="hidden sm:inline min-w-0 font-medium text-neutral-200 group-hover:text-white max-w-[100px] lg:max-w-[130px] truncate">
                   {user.name || 'Account'}
                 </span>
                 {currentWorkspaceRole && (
                   <span
-                    className={`hidden md:inline px-1.5 py-0.2 rounded text-[9px] font-mono font-bold uppercase ${
+                    className={`hidden lg:inline px-1.5 py-0.5 rounded text-[9px] font-mono font-bold uppercase ${
                       currentWorkspaceRole === 'admin'
                         ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
                         : currentWorkspaceRole === 'moderator'

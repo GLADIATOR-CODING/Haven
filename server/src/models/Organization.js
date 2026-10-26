@@ -41,6 +41,8 @@ const organizationSchema = new mongoose.Schema(
     join: {
       code: { type: String, unique: true, sparse: true, uppercase: true, trim: true },
       rotatedAt: { type: Date, default: Date.now },
+      expiresAt: { type: Date, default: null },
+      expiryDays: { type: Number, default: 30 },
     },
     allowedDomains: [{ type: String, lowercase: true, trim: true }],
     categories: [categorySchema],

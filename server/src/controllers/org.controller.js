@@ -29,7 +29,8 @@ export const updateOrgConfig = asyncHandler(async (req, res) => {
 });
 
 export const rotateInviteCode = asyncHandler(async (req, res) => {
-  const result = await orgService.rotateInviteCode(req.org._id);
+  const expiresInDays = req.body?.expiresInDays !== undefined ? req.body.expiresInDays : req.query?.expiresInDays;
+  const result = await orgService.rotateInviteCode(req.org._id, expiresInDays);
   res.status(200).json(result);
 });
 
@@ -46,4 +47,13 @@ export const updateMemberRole = asyncHandler(async (req, res) => {
     req.user._id
   );
   res.status(200).json({ membership: updated });
+});
+
+export const removeMember = asyncHandler(async (req, res) => {
+  const result = await orgService.removeMember(
+    req.org._id,
+    req.params.userId,
+    req.user._id
+  );
+  res.status(200).json(result);
 });

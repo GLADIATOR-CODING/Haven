@@ -12,7 +12,13 @@ export const getMyClaims = asyncHandler(async (req, res) => {
 });
 
 export const getClaimById = asyncHandler(async (req, res) => {
-  const result = await claimService.getClaimById(req.org._id, req.params.id, req.user, req.org);
+  const result = await claimService.getClaimById(
+    req.org._id,
+    req.params.id,
+    req.user,
+    req.membership.role,
+    req.org
+  );
   res.status(200).json(result);
 });
 

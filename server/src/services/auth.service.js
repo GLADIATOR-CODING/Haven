@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { User } from '../models/User.js';
 import { Membership } from '../models/Membership.js';
+import { Organization } from '../models/Organization.js';
 import { ApiError } from '../utils/ApiError.js';
 import { signToken } from '../utils/tokens.js';
 
@@ -110,11 +111,28 @@ export async function demoLogin({ role = 'member', orgSlug = 'demo-campus' }) {
     throw new ApiError(404, 'DEMO_USER_NOT_FOUND', `Demo user for role ${role} not found.`);
   }
 
-  const token = signToken({ id: user._id, email: user.email });
-  const profile = await getMe(user._id);
-
   const normalizedSlug =
     orgSlug === 'campus' ? 'demo-campus' : orgSlug === 'office' ? 'demo-office' : orgSlug;
+
+  if (!['demo-campus', 'demo-office'].includes(normalizedSlug)) {
+    throw new ApiError(400, 'INVALID_DEMO_WORKSPACE', 'Demo sign-in is only available for demo workspaces.');
+  }
+
+  const org = await Organization.findOne({ slug: normalizedSlug });
+  if (!org) {
+    throw new ApiError(404, 'DEMO_WORKSPACE_NOT_FOUND', 'The requested demo workspace has not been seeded yet.');
+  }
+
+  // Demo sign-in is also a role reset. This keeps Alex a member even if an
+  // evaluator previously promoted the account while testing the admin UI.
+  await Membership.findOneAndUpdate(
+    { userId: user._id, orgId: org._id },
+    { $set: { role } },
+    { upsert: true, new: true, setDefaultsOnInsert: true }
+  );
+
+  const token = signToken({ id: user._id, email: user.email });
+  const profile = await getMe(user._id);
 
   return {
     ...profile,

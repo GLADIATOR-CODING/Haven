@@ -41,6 +41,11 @@ import {
   Lightbulb,
   Layers,
   Radio,
+  Download,
+  FileSpreadsheet,
+  History,
+  UserCheck,
+  HelpCircle,
 } from 'lucide-react';
 
 export default function OrgHomePage() {
@@ -76,19 +81,44 @@ export default function OrgHomePage() {
   const [processingClaimId, setProcessingClaimId] = useState(null);
   const [handoverCodeInput, setHandoverCodeInput] = useState('');
   const [verifyingHandover, setVerifyingHandover] = useState(false);
+  const [handoverFeedback, setHandoverFeedback] = useState(null);
   const [reviewSubTab, setReviewSubTab] = useState('claims');
   const [editDomains, setEditDomains] = useState([]);
   const [newDomainInput, setNewDomainInput] = useState('');
   const [savingDomains, setSavingDomains] = useState(false);
   const [domainsMsg, setDomainsMsg] = useState(null);
 
-  // Settings State
+  // Settings State & 6 Sub-Tab Navigation
+  const [settingsActiveSubTab, setSettingsActiveSubTab] = useState('general'); // general, categories, locations, policy, members, invite_audit
   const [settingsPlaces, setSettingsPlaces] = useState([]);
   const [settingsCategories, setSettingsCategories] = useState([]);
   const [settingsHandover, setSettingsHandover] = useState('');
   const [settingsName, setSettingsName] = useState('');
+  const [settingsExpiryDays, setSettingsExpiryDays] = useState(60);
+  const [settingsAiEnabled, setSettingsAiEnabled] = useState(true);
+  const [settingsMinDetails, setSettingsMinDetails] = useState(1);
+  const [settingsMaxAttempts, setSettingsMaxAttempts] = useState(3);
+  const [settingsSensitivity, setSettingsSensitivity] = useState('balanced');
+  const [settingsTimeWindow, setSettingsTimeWindow] = useState(72);
   const [settingsSaving, setSettingsSaving] = useState(false);
   const [settingsFeedback, setSettingsFeedback] = useState(null);
+  const [notice, setNotice] = useState(null);
+  const [copiedHandoverClaimId, setCopiedHandoverClaimId] = useState(null);
+
+  // Category verification prompts & keywords editor states
+  const [expandedCatKey, setExpandedCatKey] = useState(null);
+  const [newPromptLabel, setNewPromptLabel] = useState('');
+  const [newPromptKind, setNewPromptKind] = useState('secret');
+  const [newPromptRequired, setNewPromptRequired] = useState(true);
+  const [newCatKeywordInput, setNewCatKeywordInput] = useState('');
+
+  // Member management & Search state
+  const [memberSearchQuery, setMemberSearchQuery] = useState('');
+  const [updatingMemberId, setUpdatingMemberId] = useState(null);
+
+  // Access Code rotation & copy states
+  const [rotateExpiryDays, setRotateExpiryDays] = useState(30);
+  const [copiedInviteUrl, setCopiedInviteUrl] = useState(false);
 
   // New Place input states
   const [newPlaceLabel, setNewPlaceLabel] = useState('');
@@ -137,6 +167,12 @@ export default function OrgHomePage() {
       setActiveTab(tabParam);
     }
   }, [isSettingsRoute, tabParam]);
+
+  useEffect(() => {
+    if (!notice) return undefined;
+    const timer = window.setTimeout(() => setNotice(null), 4500);
+    return () => window.clearTimeout(timer);
+  }, [notice]);
 
   const {
     data: orgData,
@@ -189,6 +225,12 @@ export default function OrgHomePage() {
     enabled: !!orgData && userRole === 'admin',
   });
 
+  const { data: auditData, isLoading: auditLoading, refetch: refetchAuditLogs } = useQuery({
+    queryKey: ['auditLogs', slug],
+    queryFn: () => api.get(`/api/o/${slug}/audit/logs?limit=30`),
+    enabled: !!orgData && (userRole === 'admin' || userRole === 'moderator'),
+  });
+
   const { data: myData, isLoading: myLoading, refetch: refetchMyReports } = useQuery({
     queryKey: ['myReports', slug],
     queryFn: () => api.get(`/api/o/${slug}/reports/mine`),
@@ -203,23 +245,45 @@ export default function OrgHomePage() {
 
   const copyCode = () => {
     if (orgData?.org?.join?.code) {
-      navigator.clipboard.writeText(orgData.org.join.code);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      navigator.clipboard.writeText(orgData.org.join.code)
+        .then(() => {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        })
+        .catch(() => setNotice({ type: 'error', text: 'Could not copy the access code. Please select and copy it manually.' }));
     }
   };
 
+  const handleCopyInviteUrl = () => {
+    const inviteUrl = `${window.location.origin}/join?code=${orgData?.org?.join?.code || ''}`;
+    navigator.clipboard.writeText(inviteUrl)
+      .then(() => {
+        setCopiedInviteUrl(true);
+        setTimeout(() => setCopiedInviteUrl(false), 2000);
+      })
+      .catch(() => setNotice({ type: 'error', text: 'Could not copy the invite link. Please copy it from the address bar.' }));
+  };
+
+  const handleCopyHandoverCode = (claimId, code) => {
+    navigator.clipboard.writeText(code)
+      .then(() => {
+        setCopiedHandoverClaimId(claimId);
+        setTimeout(() => setCopiedHandoverClaimId(null), 2000);
+      })
+      .catch(() => setNotice({ type: 'error', text: 'Could not copy the handover code. Please enter it manually at the desk.' }));
+  };
+
   const handleRotateCode = async () => {
-    if (!window.confirm('Rotate workspace access code? The old code will immediately stop working for new members.')) {
+    if (!window.confirm(`Rotate workspace access code? The current code will be replaced immediately with a new code valid for ${rotateExpiryDays} days.`)) {
       return;
     }
     setRotatingCode(true);
     try {
-      const res = await api.post(`/api/o/${slug}/invite/rotate`);
+      const res = await api.post(`/api/o/${slug}/invite/rotate`, { expiresInDays: Number(rotateExpiryDays) });
       await refetchOrg();
-      alert(`Admin access code successfully rotated to: ${res.code}`);
+      setNotice({ type: 'success', text: `Access code rotated to ${res.code}. It expires in ${rotateExpiryDays} days.` });
     } catch (err) {
-      alert(err.message || 'Failed to rotate code');
+      setNotice({ type: 'error', text: err.message || 'Failed to rotate code' });
     } finally {
       setRotatingCode(false);
     }
@@ -234,6 +298,12 @@ export default function OrgHomePage() {
       setSettingsCategories(orgData.org.categories || []);
       setSettingsHandover(orgData.org.handoverInstructions || '');
       setSettingsName(orgData.org.name || '');
+      setSettingsExpiryDays(orgData.org.expiryDays ?? 60);
+      setSettingsAiEnabled(orgData.org.aiEnabled !== false);
+      setSettingsMinDetails(orgData.org.claimPolicy?.minMatchingDetails ?? 1);
+      setSettingsMaxAttempts(orgData.org.claimPolicy?.maxAttempts ?? 3);
+      setSettingsSensitivity(orgData.org.matchSensitivity || 'balanced');
+      setSettingsTimeWindow(orgData.org.timeWindowHours ?? 72);
     }
   }, [orgData?.org]);
 
@@ -242,7 +312,7 @@ export default function OrgHomePage() {
     if (!label) return;
     const key = label.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/(^_|_$)/g, '');
     if (settingsPlaces.some((p) => p.key === key)) {
-      alert('A place with a similar name already exists.');
+      setNotice({ type: 'error', text: 'A place with a similar name already exists.' });
       return;
     }
     setSettingsPlaces([...settingsPlaces, { key, label, zone: newPlaceZone.trim() || 'main' }]);
@@ -252,7 +322,7 @@ export default function OrgHomePage() {
 
   const handleRemovePlace = (keyToRemove) => {
     if (settingsPlaces.length <= 1) {
-      alert('Workspace must have at least one physical location.');
+      setNotice({ type: 'error', text: 'Workspace must have at least one physical location.' });
       return;
     }
     setSettingsPlaces(settingsPlaces.filter((p) => p.key !== keyToRemove));
@@ -263,7 +333,7 @@ export default function OrgHomePage() {
     if (!label) return;
     const key = label.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/(^_|_$)/g, '');
     if (settingsCategories.some((c) => c.key === key)) {
-      alert('A category with a similar name already exists.');
+      setNotice({ type: 'error', text: 'A category with a similar name already exists.' });
       return;
     }
     setSettingsCategories([
@@ -290,13 +360,13 @@ export default function OrgHomePage() {
       settingsCategories.map((c) =>
         c.key === key
           ? {
-              ...c,
-              sensitive: !c.sensitive,
-              autoApproveClaims: !c.sensitive ? false : c.autoApproveClaims,
-              verificationPrompts: !c.sensitive
-                ? [{ key: 'identifier_note', label: 'Identifying marks / unique details', kind: 'text', required: true }]
-                : [],
-            }
+            ...c,
+            sensitive: !c.sensitive,
+            autoApproveClaims: !c.sensitive ? false : c.autoApproveClaims,
+            verificationPrompts: !c.sensitive
+              ? [{ key: 'identifier_note', label: 'Identifying marks / unique details', kind: 'text', required: true }]
+              : [],
+          }
           : c
       )
     );
@@ -307,10 +377,10 @@ export default function OrgHomePage() {
       settingsCategories.map((c) =>
         c.key === key
           ? {
-              ...c,
-              autoApproveClaims: !c.autoApproveClaims,
-              sensitive: !c.autoApproveClaims ? false : c.sensitive,
-            }
+            ...c,
+            autoApproveClaims: !c.autoApproveClaims,
+            sensitive: !c.autoApproveClaims ? false : c.sensitive,
+          }
           : c
       )
     );
@@ -318,7 +388,7 @@ export default function OrgHomePage() {
 
   const handleRemoveCategory = (keyToRemove) => {
     if (settingsCategories.length <= 1) {
-      alert('Workspace must have at least one item category.');
+      setNotice({ type: 'error', text: 'Workspace must have at least one item category.' });
       return;
     }
     setSettingsCategories(settingsCategories.filter((c) => c.key !== keyToRemove));
@@ -334,17 +404,121 @@ export default function OrgHomePage() {
         locations: settingsPlaces,
         categories: settingsCategories,
         allowedDomains: editDomains,
+        expiryDays: Number(settingsExpiryDays),
+        aiEnabled: !!settingsAiEnabled,
+        claimPolicy: {
+          minMatchingDetails: Number(settingsMinDetails),
+          maxAttempts: Number(settingsMaxAttempts),
+        },
+        matchSensitivity: settingsSensitivity,
+        timeWindowHours: Number(settingsTimeWindow),
       });
       await refetchOrg();
       queryClient.invalidateQueries({ queryKey: ['orgConfig', slug] });
       queryClient.invalidateQueries({ queryKey: ['foundFeed'] });
-      setSettingsFeedback({ type: 'success', text: 'All workspace settings (places, items, emails) saved successfully!' });
+      setSettingsFeedback({ type: 'success', text: 'All workspace governance settings saved successfully!' });
       setTimeout(() => setSettingsFeedback(null), 4000);
     } catch (err) {
       setSettingsFeedback({ type: 'error', text: err.message || 'Failed to save settings' });
     } finally {
       setSettingsSaving(false);
     }
+  };
+
+  const handleAddPromptToCategory = (catKey) => {
+    const label = newPromptLabel.trim();
+    if (!label) return;
+    const key = label.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/(^_|_$)/g, '');
+    setSettingsCategories(
+      settingsCategories.map((c) => {
+        if (c.key !== catKey) return c;
+        const currentPrompts = c.verificationPrompts || [];
+        if (currentPrompts.some((p) => p.key === key)) {
+          setNotice({ type: 'error', text: 'A question with this name already exists in this category.' });
+          return c;
+        }
+        return {
+          ...c,
+          verificationPrompts: [
+            ...currentPrompts,
+            { key, label, kind: newPromptKind, required: newPromptRequired },
+          ],
+        };
+      })
+    );
+    setNewPromptLabel('');
+  };
+
+  const handleRemovePromptFromCategory = (catKey, promptKey) => {
+    setSettingsCategories(
+      settingsCategories.map((c) => {
+        if (c.key !== catKey) return c;
+        return {
+          ...c,
+          verificationPrompts: (c.verificationPrompts || []).filter((p) => p.key !== promptKey),
+        };
+      })
+    );
+  };
+
+  const handleAddKeywordToCategory = (catKey) => {
+    const kw = newCatKeywordInput.trim().toLowerCase();
+    if (!kw) return;
+    setSettingsCategories(
+      settingsCategories.map((c) => {
+        if (c.key !== catKey) return c;
+        const currentKeywords = c.keywords || [];
+        if (currentKeywords.includes(kw)) return c;
+        return {
+          ...c,
+          keywords: [...currentKeywords, kw],
+        };
+      })
+    );
+    setNewCatKeywordInput('');
+  };
+
+  const handleRemoveKeywordFromCategory = (catKey, kwToRemove) => {
+    setSettingsCategories(
+      settingsCategories.map((c) => {
+        if (c.key !== catKey) return c;
+        return {
+          ...c,
+          keywords: (c.keywords || []).filter((k) => k !== kwToRemove),
+        };
+      })
+    );
+  };
+
+  const handleUpdateMemberRole = async (targetUserId, newRole) => {
+    setUpdatingMemberId(targetUserId);
+    try {
+      await api.patch(`/api/o/${slug}/members/${targetUserId}`, { role: newRole });
+      refetchMembers();
+      queryClient.invalidateQueries({ queryKey: ['orgMembers', slug] });
+    } catch (err) {
+      setNotice({ type: 'error', text: err.message || 'Failed to update member role' });
+    } finally {
+      setUpdatingMemberId(null);
+    }
+  };
+
+  const handleRemoveMember = async (targetUserId, memberName) => {
+    if (!window.confirm(`Are you sure you want to remove ${memberName || 'this user'} from the workspace?`)) return;
+    setUpdatingMemberId(targetUserId);
+    try {
+      await api.delete(`/api/o/${slug}/members/${targetUserId}`);
+      refetchMembers();
+      queryClient.invalidateQueries({ queryKey: ['orgMembers', slug] });
+    } catch (err) {
+      setNotice({ type: 'error', text: err.message || 'Failed to remove member' });
+    } finally {
+      setUpdatingMemberId(null);
+    }
+  };
+
+  const handleDownloadAuditCsv = () => {
+    window.open(`/api/o/${slug}/audit/export`, '_blank');
   };
 
   const handleAddDomainToOrg = () => {
@@ -411,7 +585,7 @@ export default function OrgHomePage() {
       refetchReviewQueue();
       refetchFeed();
     } catch (err) {
-      alert(err.message || 'Review action failed');
+      setNotice({ type: 'error', text: err.message || 'Review action failed' });
     } finally {
       setProcessingReviewId(null);
     }
@@ -429,7 +603,7 @@ export default function OrgHomePage() {
       queryClient.invalidateQueries({ queryKey: ['orgModRequests'] });
       queryClient.invalidateQueries({ queryKey: ['orgMembers'] });
     } catch (err) {
-      alert(err.message || 'Staff request action failed');
+      setNotice({ type: 'error', text: err.message || 'Staff request action failed' });
     } finally {
       setProcessingReqId(null);
     }
@@ -446,7 +620,7 @@ export default function OrgHomePage() {
       queryClient.invalidateQueries({ queryKey: ['deskClaimsQueue'] });
       queryClient.invalidateQueries({ queryKey: ['myClaims'] });
     } catch (err) {
-      alert(err.message || 'Claim review action failed');
+      setNotice({ type: 'error', text: err.message || 'Claim review action failed' });
     } finally {
       setProcessingClaimId(null);
     }
@@ -475,19 +649,6 @@ export default function OrgHomePage() {
       setVerifyingHandover(false);
     }
   };
-
-  const handleUpdateMemberRole = async (targetUserId, newRole) => {
-    try {
-      await api.patch(`/api/o/${slug}/members/${targetUserId}`, { role: newRole });
-      if (refetchMembers) refetchMembers();
-      refetchOrg();
-      queryClient.invalidateQueries({ queryKey: ['orgMembers'] });
-      queryClient.invalidateQueries({ queryKey: ['orgConfig'] });
-    } catch (err) {
-      alert(err.message || 'Failed to update member role');
-    }
-  };
-
 
   if (orgLoading) {
     return (
@@ -559,7 +720,26 @@ export default function OrgHomePage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-6">
+    <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-10 py-10 sm:py-12 space-y-8">
+      {notice && (
+        <div
+          role="status"
+          aria-live="polite"
+          className={`sticky top-20 z-40 mx-auto flex max-w-2xl items-center justify-between gap-3 rounded-xl border px-4 py-3 text-xs font-medium shadow-lg ${
+            notice.type === 'success'
+              ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+              : 'border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            {notice.type === 'success' ? <CheckCircle2 className="h-4 w-4 shrink-0" /> : <AlertCircle className="h-4 w-4 shrink-0" />}
+            <span>{notice.text}</span>
+          </div>
+          <button type="button" onClick={() => setNotice(null)} className="rounded p-1 hover:bg-black/5 dark:hover:bg-white/10" aria-label="Dismiss notification">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
       {/* Quick Demo Role Switcher for Evaluators */}
       {isDemoOrg && (
         <div className="p-3.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] flex flex-wrap items-center justify-between gap-3 shadow-xs">
@@ -669,11 +849,10 @@ export default function OrgHomePage() {
             <button
               type="button"
               onClick={handleOpenSettingsTab}
-              className={`p-3 sm:px-3.5 sm:py-3 rounded-xl border text-xs font-semibold flex items-center gap-2 transition-all shadow-xs ${
-                activeTab === 'settings'
+              className={`p-3 sm:px-3.5 sm:py-3 rounded-xl border text-xs font-semibold flex items-center gap-2 transition-all shadow-xs ${activeTab === 'settings'
                   ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 border-neutral-900 dark:border-white'
                   : 'border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:border-red-500/50 hover:bg-red-500/10 text-[var(--text-primary)]'
-              }`}
+                }`}
               title="Workspace Settings (Places, Items, Emails)"
             >
               <Settings className="w-4 h-4 text-red-500 shrink-0" />
@@ -1115,11 +1294,10 @@ export default function OrgHomePage() {
               }`}
           >
             <span>My Claims</span>
-            <span className={`px-1.5 py-0.5 rounded font-mono text-[10px] font-bold ${
-              myClaims.length > 0
+            <span className={`px-1.5 py-0.5 rounded font-mono text-[10px] font-bold ${myClaims.length > 0
                 ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
                 : 'bg-[var(--bg-subtle)] text-[var(--text-muted)]'
-            }`}>
+              }`}>
               {myClaims.length}
             </span>
           </button>
@@ -1329,33 +1507,30 @@ export default function OrgHomePage() {
           <div className="flex items-center gap-2 pb-1 border-b border-[var(--border-subtle)] text-xs font-semibold">
             <button
               onClick={() => setReviewSubTab('claims')}
-              className={`px-3.5 py-1.5 rounded-lg font-mono transition-colors flex items-center gap-1.5 ${
-                reviewSubTab === 'claims'
+              className={`px-3.5 py-1.5 rounded-lg font-mono transition-colors flex items-center gap-1.5 ${reviewSubTab === 'claims'
                   ? 'bg-amber-500 text-black font-bold shadow-xs'
                   : 'bg-[var(--bg-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-              }`}
+                }`}
             >
               <KeyRound className="w-3.5 h-3.5" />
               <span>Pending Claims ({pendingDeskClaims.length})</span>
             </button>
             <button
               onClick={() => setReviewSubTab('intake')}
-              className={`px-3.5 py-1.5 rounded-lg font-mono transition-colors flex items-center gap-1.5 ${
-                reviewSubTab === 'intake'
+              className={`px-3.5 py-1.5 rounded-lg font-mono transition-colors flex items-center gap-1.5 ${reviewSubTab === 'intake'
                   ? 'bg-amber-500 text-black font-bold shadow-xs'
                   : 'bg-[var(--bg-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-              }`}
+                }`}
             >
               <Lock className="w-3.5 h-3.5" />
               <span>Quarantined Intake ({reviewQueueData?.reports?.length || 0})</span>
             </button>
             <button
               onClick={() => setReviewSubTab('handover')}
-              className={`px-3.5 py-1.5 rounded-lg font-mono transition-colors flex items-center gap-1.5 ${
-                reviewSubTab === 'handover'
+              className={`px-3.5 py-1.5 rounded-lg font-mono transition-colors flex items-center gap-1.5 ${reviewSubTab === 'handover'
                   ? 'bg-amber-500 text-black font-bold shadow-xs'
                   : 'bg-[var(--bg-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-              }`}
+                }`}
             >
               <CheckCircle2 className="w-3.5 h-3.5" />
               <span>Verify Handover Code</span>
@@ -1579,11 +1754,10 @@ export default function OrgHomePage() {
 
                   {handoverFeedback && (
                     <div
-                      className={`p-3 rounded-lg text-xs font-semibold flex items-center justify-between ${
-                        handoverFeedback.success
+                      className={`p-3 rounded-lg text-xs font-semibold flex items-center justify-between ${handoverFeedback.success
                           ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
                           : 'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20'
-                      }`}
+                        }`}
                     >
                       <span>{handoverFeedback.message}</span>
                       <button onClick={() => setHandoverFeedback(null)} className="font-bold ml-2">
@@ -1680,34 +1854,32 @@ export default function OrgHomePage() {
                 return (
                   <div
                     key={c.id}
-                    className={`border rounded-xl p-5 shadow-sm space-y-4 flex flex-col justify-between ${
-                      isApproved
+                    className={`border rounded-xl p-5 shadow-sm space-y-4 flex flex-col justify-between ${isApproved
                         ? 'border-emerald-500/40 bg-[var(--bg-card)]'
                         : isSubmitted
-                        ? 'border-amber-500/40 bg-[var(--bg-card)]'
-                        : 'border-[var(--border-subtle)] bg-[var(--bg-card)]'
-                    }`}
+                          ? 'border-amber-500/40 bg-[var(--bg-card)]'
+                          : 'border-[var(--border-subtle)] bg-[var(--bg-card)]'
+                      }`}
                   >
                     <div className="space-y-3">
                       <div className="flex items-center justify-between text-xs">
                         <span
-                          className={`px-2.5 py-0.5 rounded text-[10px] font-mono font-bold uppercase border ${
-                            isApproved
+                          className={`px-2.5 py-0.5 rounded text-[10px] font-mono font-bold uppercase border ${isApproved
                               ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
                               : isSubmitted
-                              ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
-                              : isCollected
-                              ? 'bg-neutral-500/10 text-neutral-600 dark:text-neutral-400 border-neutral-500/30'
-                              : 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/30'
-                          }`}
+                                ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
+                                : isCollected
+                                  ? 'bg-neutral-500/10 text-neutral-600 dark:text-neutral-400 border-neutral-500/30'
+                                  : 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/30'
+                            }`}
                         >
                           {isApproved
                             ? 'CLAIM APPROVED · READY FOR PICKUP'
                             : isSubmitted
-                            ? 'UNDER DESK REVIEW'
-                            : isCollected
-                            ? 'COLLECTED & HANDED OVER ✓'
-                            : 'CLAIM DECLINED'}
+                              ? 'UNDER DESK REVIEW'
+                              : isCollected
+                                ? 'COLLECTED & HANDED OVER ✓'
+                                : 'CLAIM DECLINED'}
                         </span>
                         <span className="text-[var(--text-muted)] font-mono text-[10px]">
                           {new Date(c.createdAt).toLocaleDateString()}
@@ -1739,14 +1911,11 @@ export default function OrgHomePage() {
                               {c.handoverCode}
                             </span>
                             <button
-                              onClick={() => {
-                                navigator.clipboard.writeText(c.handoverCode);
-                                alert('Handover code copied to clipboard!');
-                              }}
+                              onClick={() => handleCopyHandoverCode(c.id, c.handoverCode)}
                               className="p-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white transition-colors"
                               title="Copy code"
                             >
-                              <Copy className="w-3.5 h-3.5" />
+                              {copiedHandoverClaimId === c.id ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                             </button>
                           </div>
                           <p className="text-[11px] text-neutral-400">
@@ -1942,11 +2111,10 @@ export default function OrgHomePage() {
 
               {domainsMsg && (
                 <div
-                  className={`p-2.5 rounded-lg text-xs font-medium flex items-center gap-2 ${
-                    domainsMsg.type === 'success'
+                  className={`p-2.5 rounded-lg text-xs font-medium flex items-center gap-2 ${domainsMsg.type === 'success'
                       ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
                       : 'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20'
-                  }`}
+                    }`}
                 >
                   <AlertCircle className="w-4 h-4 shrink-0" />
                   <span>{domainsMsg.text}</span>
@@ -2134,13 +2302,12 @@ export default function OrgHomePage() {
 
                     <div className="flex items-center gap-2 self-start sm:self-auto">
                       <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase ${
-                          m.role === 'admin'
+                        className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase ${m.role === 'admin'
                             ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/30'
                             : m.role === 'moderator'
-                            ? 'bg-amber-500/10 text-amber-500 border border-amber-500/30'
-                            : 'bg-[var(--bg-subtle)] text-[var(--text-secondary)] border border-[var(--border-subtle)]'
-                        }`}
+                              ? 'bg-amber-500/10 text-amber-500 border border-amber-500/30'
+                              : 'bg-[var(--bg-subtle)] text-[var(--text-secondary)] border border-[var(--border-subtle)]'
+                          }`}
                       >
                         {m.role}
                       </span>
@@ -2181,7 +2348,7 @@ export default function OrgHomePage() {
         </div>
       )}
 
-      {/* 5. WORKSPACE SETTINGS TAB (Admin Only) */}
+      {/* 5. WORKSPACE SETTINGS TAB (Admin Only - 6-Tab Governance Hub) */}
       {activeTab === 'settings' && currentRole === 'admin' && (
         <div id="settings-section" className="space-y-6 scroll-mt-20">
           {/* Header Card */}
@@ -2193,13 +2360,13 @@ export default function OrgHomePage() {
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-[var(--text-primary)] font-mono uppercase tracking-wide flex items-center gap-2">
-                    <span>Workspace Governance Settings</span>
+                    <span>Workspace Governance &amp; Admin Hub</span>
                     <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-red-500/10 text-red-500 border border-red-500/20">
                       ADMIN ONLY
                     </span>
                   </h3>
                   <p className="text-xs text-[var(--text-secondary)]">
-                    Modify campus places, allowed item categories, and whitelist email domains accepted for {org.name}.
+                    Configure categories, verification prompts, matching policies, staff roster, and custody audit logs for {org.name}.
                   </p>
                 </div>
               </div>
@@ -2215,17 +2382,16 @@ export default function OrgHomePage() {
                 ) : (
                   <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />
                 )}
-                <span>{settingsSaving ? 'Saving Changes...' : 'Save Workspace Settings'}</span>
+                <span>{settingsSaving ? 'Saving Changes...' : 'Save All Settings'}</span>
               </button>
             </div>
 
             {settingsFeedback && (
               <div
-                className={`p-3 rounded-xl text-xs font-medium flex items-center gap-2.5 ${
-                  settingsFeedback.type === 'success'
+                className={`p-3 rounded-xl text-xs font-medium flex items-center gap-2.5 ${settingsFeedback.type === 'success'
                     ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
                     : 'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20'
-                }`}
+                  }`}
               >
                 {settingsFeedback.type === 'success' ? (
                   <CheckCircle2 className="w-4 h-4 shrink-0" />
@@ -2236,367 +2402,993 @@ export default function OrgHomePage() {
               </div>
             )}
 
-            {/* General Workspace Info */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
-              <div className="space-y-1.5">
-                <label className="text-xs font-mono font-bold uppercase text-[var(--text-muted)]">
-                  Workspace Name
-                </label>
-                <input
-                  type="text"
-                  value={settingsName}
-                  onChange={(e) => setSettingsName(e.target.value)}
-                  placeholder="e.g. Apex Tech University"
-                  className="w-full px-3.5 py-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-page)] text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--border-strong)]"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-mono font-bold uppercase text-[var(--text-muted)]">
-                  Physical Drop-off Desk Handover Location
-                </label>
-                <input
-                  type="text"
-                  value={settingsHandover}
-                  onChange={(e) => setSettingsHandover(e.target.value)}
-                  placeholder="e.g. Student Center Room 102 · Mon-Fri 9am-5pm"
-                  className="w-full px-3.5 py-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-page)] text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--border-strong)]"
-                />
-              </div>
+            {/* 6 Sub-Tab Navigation Bar */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 border-b border-[var(--border-subtle)] text-xs font-mono">
+              {[
+                { id: 'general', label: '1. General & AI', icon: Settings },
+                { id: 'categories', label: '2. Categories & Prompts', icon: Package },
+                { id: 'locations', label: '3. Places & Zones', icon: MapPin },
+                { id: 'policy', label: '4. Policy & Thresholds', icon: ShieldCheck },
+                { id: 'members', label: '5. Staff & Members', icon: Users },
+                { id: 'audit', label: '6. Invite & Custody Audit', icon: History },
+              ].map((tab) => {
+                const Icon = tab.icon;
+                const isActive = settingsActiveSubTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setSettingsActiveSubTab(tab.id)}
+                    className={`px-3 py-2 rounded-xl font-bold flex items-center gap-2 transition-all whitespace-nowrap ${isActive
+                        ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 shadow-sm'
+                        : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-subtle)]'
+                      }`}
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                    <span>{tab.label}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          {/* 1. Modify Places / Locations */}
-          <div className="p-5 sm:p-6 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] shadow-sm space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-[var(--border-subtle)]">
-              <div>
-                <div className="flex items-center gap-2 text-xs font-bold text-[var(--text-primary)] font-mono uppercase tracking-wide">
+          {/* SUB-TAB 1: GENERAL & AI */}
+          {settingsActiveSubTab === 'general' && (
+            <div className="p-5 sm:p-6 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] shadow-sm space-y-5">
+              <div className="border-b border-[var(--border-subtle)] pb-3">
+                <h4 className="text-xs font-bold text-[var(--text-primary)] font-mono uppercase tracking-wide flex items-center gap-2">
+                  <Settings className="w-4 h-4 text-red-500" />
+                  <span>General Workspace Profile &amp; AI Engine</span>
+                </h4>
+                <p className="text-[11px] text-[var(--text-secondary)] mt-0.5">
+                  Core metadata, drop-off location instructions, item retention duration, and assistive AI switches.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-mono font-bold uppercase text-[var(--text-muted)]">
+                    Workspace Name
+                  </label>
+                  <input
+                    type="text"
+                    value={settingsName}
+                    onChange={(e) => setSettingsName(e.target.value)}
+                    placeholder="e.g. Apex Tech Campus"
+                    className="w-full px-3.5 py-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-page)] text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--border-strong)]"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-mono font-bold uppercase text-[var(--text-muted)]">
+                    Physical Drop-off Desk Location
+                  </label>
+                  <input
+                    type="text"
+                    value={settingsHandover}
+                    onChange={(e) => setSettingsHandover(e.target.value)}
+                    placeholder="e.g. Campus Security Room 101, Mon-Fri 9am-5pm"
+                    className="w-full px-3.5 py-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-page)] text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--border-strong)]"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-mono font-bold uppercase text-[var(--text-muted)]">
+                    Report Expiry / Retention (Days)
+                  </label>
+                  <input
+                    type="number"
+                    min="7"
+                    max="365"
+                    value={settingsExpiryDays}
+                    onChange={(e) => setSettingsExpiryDays(Number(e.target.value))}
+                    className="w-full px-3.5 py-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-page)] text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--border-strong)]"
+                  />
+                  <p className="text-[10px] text-[var(--text-muted)] font-mono">
+                    Reports older than this are automatically archived and removed from public feed.
+                  </p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-mono font-bold uppercase text-[var(--text-muted)]">
+                    Matching Time Window (Hours)
+                  </label>
+                  <input
+                    type="number"
+                    min="12"
+                    max="720"
+                    value={settingsTimeWindow}
+                    onChange={(e) => setSettingsTimeWindow(Number(e.target.value))}
+                    className="w-full px-3.5 py-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-page)] text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--border-strong)]"
+                  />
+                  <p className="text-[10px] text-[var(--text-muted)] font-mono">
+                    Temporal window within which lost and found reports are compared.
+                  </p>
+                </div>
+              </div>
+
+              {/* AI Guardrails Switch */}
+              <div className="p-4 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] flex items-center justify-between gap-3">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-emerald-500" />
+                    <span className="text-xs font-bold text-[var(--text-primary)]">
+                      AI Assistive Parsing &amp; Multimodal Detection
+                    </span>
+                    <span
+                      className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold uppercase ${settingsAiEnabled
+                          ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
+                          : 'bg-neutral-800 text-neutral-400'
+                        }`}
+                    >
+                      {settingsAiEnabled ? 'ENABLED' : 'OFFLINE / KEYWORD FALLBACK'}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-[var(--text-secondary)]">
+                    Enables natural language parsing of describe-it sentences and multimodal photo scans. When disabled or offline, Haven seamlessly falls back to 100% deterministic keyword matching with zero service disruption.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setSettingsAiEnabled(!settingsAiEnabled)}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-xs shrink-0 ${settingsAiEnabled
+                      ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                      : 'bg-neutral-800 hover:bg-neutral-700 text-neutral-300'
+                    }`}
+                >
+                  {settingsAiEnabled ? 'AI Active' : 'AI Disabled'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* SUB-TAB 2: CATEGORIES & VERIFICATION PROMPTS */}
+          {settingsActiveSubTab === 'categories' && (
+            <div className="p-5 sm:p-6 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] shadow-sm space-y-5">
+              <div className="border-b border-[var(--border-subtle)] pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <h4 className="text-xs font-bold text-[var(--text-primary)] font-mono uppercase tracking-wide flex items-center gap-2">
+                    <Package className="w-4 h-4 text-amber-500" />
+                    <span>Item Categories &amp; Verification Prompts</span>
+                    <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-neutral-900/10 dark:bg-white/10 text-[var(--text-primary)] border border-[var(--border-subtle)]">
+                      {settingsCategories.length} CATEGORIES
+                    </span>
+                  </h4>
+                  <p className="text-[11px] text-[var(--text-secondary)] mt-0.5">
+                    Define categories, sensitive quarantine rules, search keywords, and HMAC-hashed verification questions for claimant ownership checks.
+                  </p>
+                </div>
+              </div>
+
+              {/* Categories Accordion / Cards List */}
+              <div className="space-y-3">
+                {settingsCategories.map((cat) => {
+                  const isExpanded = expandedCatKey === cat.key;
+                  const promptCount = (cat.verificationPrompts || []).length;
+                  const keywords = cat.keywords || [];
+
+                  return (
+                    <div
+                      key={cat.key}
+                      className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] overflow-hidden"
+                    >
+                      <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-[var(--bg-card)] flex items-center justify-center font-mono font-bold text-xs border border-[var(--border-subtle)]">
+                            <Package className="w-4 h-4 text-[var(--text-muted)]" />
+                          </div>
+                          <div>
+                            <div className="font-semibold text-[var(--text-primary)] text-sm flex items-center gap-2">
+                              <span>{cat.label}</span>
+                              <span className="text-[10px] text-[var(--text-muted)] font-mono font-normal">({cat.key})</span>
+                            </div>
+                            <div className="text-[11px] text-[var(--text-secondary)] flex items-center gap-2 mt-0.5">
+                              <span>{promptCount} verification {promptCount === 1 ? 'question' : 'questions'}</span>
+                              <span>·</span>
+                              <span>{keywords.length} keywords</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleToggleCategorySensitive(cat.key)}
+                            className={`px-2.5 py-1 rounded-md text-[11px] font-mono font-semibold transition-colors flex items-center gap-1.5 border ${cat.sensitive
+                                ? 'bg-amber-500/15 text-amber-500 border-amber-500/30'
+                                : 'bg-[var(--bg-card)] text-[var(--text-muted)] border-[var(--border-subtle)] hover:text-[var(--text-primary)]'
+                              }`}
+                            title="Toggle sensitive quarantine"
+                          >
+                            <ShieldAlert className="w-3.5 h-3.5" />
+                            <span>{cat.sensitive ? 'Sensitive' : 'Standard'}</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleToggleCategoryAutoApprove(cat.key)}
+                            className={`px-2.5 py-1 rounded-md text-[11px] font-mono font-semibold transition-colors flex items-center gap-1.5 border ${cat.autoApproveClaims
+                                ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                                : 'bg-[var(--bg-card)] text-[var(--text-muted)] border-[var(--border-subtle)] hover:text-[var(--text-primary)]'
+                              }`}
+                            title="Toggle auto-approve"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <span>{cat.autoApproveClaims ? 'Auto-Approve' : 'Staff Review'}</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setExpandedCatKey(isExpanded ? null : cat.key)}
+                            className="px-2.5 py-1 rounded-md text-[11px] font-mono font-semibold bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 transition-colors"
+                          >
+                            {isExpanded ? 'Close Prompts' : 'Edit Prompts'}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveCategory(cat.key)}
+                            className="p-1.5 rounded-lg text-red-500 hover:bg-red-500/10 transition-colors"
+                            title={`Remove category ${cat.label}`}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Expanded Section: Verification Prompts & Keywords */}
+                      {isExpanded && (
+                        <div className="p-4 border-t border-[var(--border-subtle)] bg-[var(--bg-card)] space-y-4">
+                          <div>
+                            <div className="text-xs font-mono font-bold text-[var(--text-primary)] uppercase flex items-center justify-between">
+                              <span>Verification Prompts (Questions asked during Claim)</span>
+                              <span className="text-[10px] text-[var(--text-muted)] font-normal">
+                                Secret = HMAC-hashed comparison · Text = Fuzzy similarity
+                              </span>
+                            </div>
+
+                            <div className="mt-2.5 space-y-2">
+                              {(cat.verificationPrompts || []).length === 0 ? (
+                                <p className="text-xs text-[var(--text-muted)] italic">
+                                  No verification prompts configured for this category yet.
+                                </p>
+                              ) : (
+                                (cat.verificationPrompts || []).map((prompt) => (
+                                  <div
+                                    key={prompt.key}
+                                    className="p-2.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-subtle)] flex items-center justify-between gap-2 text-xs"
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <span
+                                        className={`px-2 py-0.5 rounded text-[9px] font-mono font-bold uppercase ${prompt.kind === 'secret'
+                                            ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20'
+                                            : 'bg-blue-500/10 text-blue-500 border border-blue-500/20'
+                                          }`}
+                                      >
+                                        {prompt.kind === 'secret' ? 'HMAC SECRET' : 'FUZZY TEXT'}
+                                      </span>
+                                      <span className="font-medium text-[var(--text-primary)]">
+                                        {prompt.label}
+                                      </span>
+                                      {prompt.required && (
+                                        <span className="text-[10px] font-mono text-red-500 font-bold">*Required</span>
+                                      )}
+                                    </div>
+
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRemovePromptFromCategory(cat.key, prompt.key)}
+                                      className="p-1 text-red-500 hover:bg-red-500/10 rounded transition-colors"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                ))
+                              )}
+                            </div>
+
+                            {/* Add Prompt Form */}
+                            <div className="mt-3 p-3 rounded-lg border border-dashed border-[var(--border-subtle)] bg-[var(--bg-page)] space-y-2">
+                              <div className="text-[11px] font-mono font-bold text-[var(--text-muted)] uppercase">
+                                Add Verification Question
+                              </div>
+                              <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
+                                <div className="sm:col-span-6">
+                                  <input
+                                    type="text"
+                                    value={newPromptLabel}
+                                    onChange={(e) => setNewPromptLabel(e.target.value)}
+                                    placeholder="e.g. Serial number, lockscreen wallpaper, engraving"
+                                    className="w-full px-3 py-1.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card)] text-xs text-[var(--text-primary)] focus:outline-none"
+                                  />
+                                </div>
+                                <div className="sm:col-span-3">
+                                  <select
+                                    value={newPromptKind}
+                                    onChange={(e) => setNewPromptKind(e.target.value)}
+                                    className="w-full px-2 py-1.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card)] text-xs text-[var(--text-primary)] focus:outline-none"
+                                  >
+                                    <option value="secret">Secret (HMAC SHA-256)</option>
+                                    <option value="text">Text (Token Overlap)</option>
+                                  </select>
+                                </div>
+                                <div className="sm:col-span-3 flex items-center justify-between gap-2">
+                                  <label className="flex items-center gap-1 text-[11px] text-[var(--text-secondary)] cursor-pointer">
+                                    <input
+                                      type="checkbox"
+                                      checked={newPromptRequired}
+                                      onChange={(e) => setNewPromptRequired(e.target.checked)}
+                                      className="rounded text-red-600 focus:ring-0"
+                                    />
+                                    <span>Required</span>
+                                  </label>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleAddPromptToCategory(cat.key)}
+                                    disabled={!newPromptLabel.trim()}
+                                    className="px-3 py-1.5 rounded-lg bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 text-xs font-bold disabled:opacity-40"
+                                  >
+                                    Add Question
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Keywords Manager */}
+                          <div className="pt-2 border-t border-[var(--border-subtle)]">
+                            <div className="text-xs font-mono font-bold text-[var(--text-primary)] uppercase">
+                              Search Keywords (Deterministic Keyword Matcher)
+                            </div>
+                            <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                              {keywords.map((kw) => (
+                                <span
+                                  key={kw}
+                                  className="px-2 py-0.5 rounded-md bg-[var(--bg-subtle)] border border-[var(--border-subtle)] text-[11px] font-mono flex items-center gap-1.5"
+                                >
+                                  <span>{kw}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveKeywordFromCategory(cat.key, kw)}
+                                    className="text-[var(--text-muted)] hover:text-red-500"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </span>
+                              ))}
+                            </div>
+                            <div className="flex items-center gap-2 mt-2">
+                              <input
+                                type="text"
+                                value={newCatKeywordInput}
+                                onChange={(e) => setNewCatKeywordInput(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    handleAddKeywordToCategory(cat.key);
+                                  }
+                                }}
+                                placeholder="Add keyword (e.g. macbook, airpods, umbrella)"
+                                className="px-3 py-1.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-page)] text-xs text-[var(--text-primary)] focus:outline-none w-64"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleAddKeywordToCategory(cat.key)}
+                                disabled={!newCatKeywordInput.trim()}
+                                className="px-3 py-1.5 rounded-lg bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 text-xs font-semibold disabled:opacity-40"
+                              >
+                                + Add Keyword
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Add New Category Card */}
+              <div className="p-4 rounded-xl bg-[var(--bg-page)] border border-dashed border-[var(--border-subtle)] space-y-3">
+                <div className="text-xs font-mono font-bold text-[var(--text-muted)] uppercase">
+                  Add New Item Category
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
+                  <div className="sm:col-span-5">
+                    <input
+                      type="text"
+                      value={newCatLabel}
+                      onChange={(e) => setNewCatLabel(e.target.value)}
+                      placeholder="Category name (e.g. Audio Gear, Bicycles, Documents)"
+                      className="w-full px-3 py-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card)] text-xs text-[var(--text-primary)] focus:outline-none"
+                    />
+                  </div>
+                  <div className="sm:col-span-4 flex items-center gap-3">
+                    <label className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)] cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={newCatSensitive}
+                        onChange={(e) => setNewCatSensitive(e.target.checked)}
+                        className="rounded border-[var(--border-subtle)] text-red-600 focus:ring-0"
+                      />
+                      <span>Sensitive Item</span>
+                    </label>
+                    <label className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)] cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={newCatAutoApprove}
+                        onChange={(e) => setNewCatAutoApprove(e.target.checked)}
+                        className="rounded border-[var(--border-subtle)] text-emerald-600 focus:ring-0"
+                      />
+                      <span>Auto-Approve</span>
+                    </label>
+                  </div>
+                  <div className="sm:col-span-3">
+                    <button
+                      type="button"
+                      onClick={handleAddCategory}
+                      disabled={!newCatLabel.trim()}
+                      className="w-full py-2 px-3 rounded-lg bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:hover:bg-neutral-200 text-white dark:text-neutral-900 text-xs font-semibold disabled:opacity-40 transition-colors flex items-center justify-center gap-1.5"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Add Category</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* SUB-TAB 3: LOCATIONS & ZONES */}
+          {settingsActiveSubTab === 'locations' && (
+            <div className="p-5 sm:p-6 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] shadow-sm space-y-4">
+              <div className="border-b border-[var(--border-subtle)] pb-3">
+                <h4 className="text-xs font-bold text-[var(--text-primary)] font-mono uppercase tracking-wide flex items-center gap-2">
                   <MapPin className="w-4 h-4 text-red-500" />
                   <span>Workspace Places &amp; Physical Locations</span>
                   <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-neutral-900/10 dark:bg-white/10 text-[var(--text-primary)] border border-[var(--border-subtle)]">
                     {settingsPlaces.length} LOCATIONS
                   </span>
-                </div>
+                </h4>
                 <p className="text-[11px] text-[var(--text-secondary)] mt-0.5">
                   Locations available when members report found items or search for lost property in this workspace.
                 </p>
               </div>
-            </div>
 
-            {/* List of current places */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
-              {settingsPlaces.map((place) => (
-                <div
-                  key={place.key}
-                  className="p-3 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] flex items-center justify-between gap-2 text-xs"
-                >
-                  <div className="flex items-center gap-2 truncate">
-                    <MapPin className="w-3.5 h-3.5 text-red-500 shrink-0" />
-                    <div className="truncate">
-                      <div className="font-semibold text-[var(--text-primary)] truncate">{place.label}</div>
-                      <div className="text-[10px] text-[var(--text-muted)] font-mono">Zone: {place.zone || 'main'}</div>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => handleRemovePlace(place.key)}
-                    className="p-1 hover:text-red-500 text-[var(--text-muted)] rounded transition-colors shrink-0"
-                    title={`Delete location ${place.label}`}
+              {/* List of current places */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
+                {settingsPlaces.map((place) => (
+                  <div
+                    key={place.key}
+                    className="p-3 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] flex items-center justify-between gap-2 text-xs"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ))}
-            </div>
-
-            {/* Add new place form */}
-            <div className="p-3.5 rounded-xl bg-[var(--bg-page)] border border-dashed border-[var(--border-subtle)] space-y-3">
-              <div className="text-xs font-mono font-bold text-[var(--text-muted)] uppercase">
-                Add New Physical Place / Zone
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
-                <div className="sm:col-span-7">
-                  <input
-                    type="text"
-                    value={newPlaceLabel}
-                    onChange={(e) => setNewPlaceLabel(e.target.value)}
-                    placeholder="Place name (e.g. Science Complex, Library 2nd Floor, Food Court)"
-                    className="w-full px-3 py-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card)] text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--border-strong)]"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleAddPlace();
-                      }
-                    }}
-                  />
-                </div>
-                <div className="sm:col-span-3">
-                  <input
-                    type="text"
-                    value={newPlaceZone}
-                    onChange={(e) => setNewPlaceZone(e.target.value)}
-                    placeholder="Zone (e.g. academic, dining)"
-                    className="w-full px-3 py-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card)] text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--border-strong)]"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleAddPlace();
-                      }
-                    }}
-                  />
-                </div>
-                <div className="sm:col-span-2">
-                  <button
-                    type="button"
-                    onClick={handleAddPlace}
-                    disabled={!newPlaceLabel.trim()}
-                    className="w-full h-full py-2 px-3 rounded-lg bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:hover:bg-neutral-200 text-white dark:text-neutral-900 text-xs font-semibold disabled:opacity-40 transition-colors flex items-center justify-center gap-1.5"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Add Place</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* 2. Modify Item Categories & Sensitivity / Auto-Approve Policies */}
-          <div className="p-5 sm:p-6 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] shadow-sm space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-[var(--border-subtle)]">
-              <div>
-                <div className="flex items-center gap-2 text-xs font-bold text-[var(--text-primary)] font-mono uppercase tracking-wide">
-                  <Package className="w-4 h-4 text-amber-500" />
-                  <span>Item Categories &amp; Verification Rules</span>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-neutral-900/10 dark:bg-white/10 text-[var(--text-primary)] border border-[var(--border-subtle)]">
-                    {settingsCategories.length} CATEGORIES
-                  </span>
-                </div>
-                <p className="text-[11px] text-[var(--text-secondary)] mt-0.5">
-                  Configure whether items in each category require staff verification or allow automated one-click claim approvals.
-                </p>
-              </div>
-            </div>
-
-            {/* List of current categories */}
-            <div className="divide-y divide-[var(--border-subtle)] border border-[var(--border-subtle)] rounded-xl overflow-hidden bg-[var(--bg-card)]">
-              {settingsCategories.map((cat) => (
-                <div
-                  key={cat.key}
-                  className="p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-[var(--bg-subtle)] flex items-center justify-center font-mono font-bold text-xs">
-                      <Package className="w-4 h-4 text-[var(--text-muted)]" />
+                    <div className="flex items-center gap-2 truncate">
+                      <MapPin className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                      <div className="truncate">
+                        <div className="font-semibold text-[var(--text-primary)] truncate">{place.label}</div>
+                        <div className="text-[10px] text-[var(--text-muted)] font-mono">Zone: {place.zone || 'main'}</div>
+                      </div>
                     </div>
-                    <div>
-                      <div className="font-semibold text-[var(--text-primary)] text-sm">{cat.label}</div>
-                      <div className="text-[10px] text-[var(--text-muted)] font-mono">key: {cat.key}</div>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-2.5">
-                    {/* Sensitive toggle button */}
                     <button
                       type="button"
-                      onClick={() => handleToggleCategorySensitive(cat.key)}
-                      className={`px-2.5 py-1 rounded-md text-[11px] font-mono font-semibold transition-colors flex items-center gap-1.5 border ${
-                        cat.sensitive
-                          ? 'bg-amber-500/15 text-amber-500 border-amber-500/30'
-                          : 'bg-[var(--bg-subtle)] text-[var(--text-muted)] border-[var(--border-subtle)] hover:text-[var(--text-primary)]'
-                      }`}
-                      title="Toggle sensitive quarantine requirement"
-                    >
-                      {cat.sensitive ? (
-                        <ShieldAlert className="w-3.5 h-3.5 text-amber-500" />
-                      ) : (
-                        <Shield className="w-3.5 h-3.5" />
-                      )}
-                      <span>{cat.sensitive ? 'Sensitive (Requires Review)' : 'Standard (Public Feed)'}</span>
-                    </button>
-
-                    {/* Auto-approve toggle button */}
-                    <button
-                      type="button"
-                      onClick={() => handleToggleCategoryAutoApprove(cat.key)}
-                      className={`px-2.5 py-1 rounded-md text-[11px] font-mono font-semibold transition-colors flex items-center gap-1.5 border ${
-                        cat.autoApproveClaims
-                          ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
-                          : 'bg-[var(--bg-subtle)] text-[var(--text-muted)] border-[var(--border-subtle)] hover:text-[var(--text-primary)]'
-                      }`}
-                      title="Toggle automated claim approval"
-                    >
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      <span>{cat.autoApproveClaims ? 'Auto-Approve Claims' : 'Staff Review Claims'}</span>
-                    </button>
-
-                    {/* Delete button */}
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveCategory(cat.key)}
-                      className="p-1.5 rounded-lg text-red-500 hover:bg-red-500/10 transition-colors"
-                      title={`Remove category ${cat.label}`}
+                      onClick={() => handleRemovePlace(place.key)}
+                      className="p-1 hover:text-red-500 text-[var(--text-muted)] rounded transition-colors shrink-0"
+                      title={`Delete location ${place.label}`}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Add new category form */}
-            <div className="p-3.5 rounded-xl bg-[var(--bg-page)] border border-dashed border-[var(--border-subtle)] space-y-3">
-              <div className="text-xs font-mono font-bold text-[var(--text-muted)] uppercase">
-                Add New Item Category
+                ))}
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
-                <div className="sm:col-span-5">
+
+              {/* Add new place form */}
+              <div className="p-3.5 rounded-xl bg-[var(--bg-page)] border border-dashed border-[var(--border-subtle)] space-y-3">
+                <div className="text-xs font-mono font-bold text-[var(--text-muted)] uppercase">
+                  Add New Physical Place / Zone
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
+                  <div className="sm:col-span-7">
+                    <input
+                      type="text"
+                      value={newPlaceLabel}
+                      onChange={(e) => setNewPlaceLabel(e.target.value)}
+                      placeholder="Place name (e.g. Science Complex, Library 2nd Floor, Food Court)"
+                      className="w-full px-3 py-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card)] text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--border-strong)]"
+                    />
+                  </div>
+                  <div className="sm:col-span-3">
+                    <input
+                      type="text"
+                      value={newPlaceZone}
+                      onChange={(e) => setNewPlaceZone(e.target.value)}
+                      placeholder="Zone (e.g. academic, dining)"
+                      className="w-full px-3 py-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card)] text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--border-strong)]"
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <button
+                      type="button"
+                      onClick={handleAddPlace}
+                      disabled={!newPlaceLabel.trim()}
+                      className="w-full h-full py-2 px-3 rounded-lg bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:hover:bg-neutral-200 text-white dark:text-neutral-900 text-xs font-semibold disabled:opacity-40 transition-colors flex items-center justify-center gap-1.5"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Add Place</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* SUB-TAB 4: POLICY & MATCHING THRESHOLDS */}
+          {settingsActiveSubTab === 'policy' && (
+            <div className="p-5 sm:p-6 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] shadow-sm space-y-5">
+              <div className="border-b border-[var(--border-subtle)] pb-3">
+                <h4 className="text-xs font-bold text-[var(--text-primary)] font-mono uppercase tracking-wide flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-blue-500" />
+                  <span>Matching Sensitivity &amp; Verification Policy</span>
+                </h4>
+                <p className="text-[11px] text-[var(--text-secondary)] mt-0.5">
+                  Control how strictly the deterministic matching engine scores lost and found items, and abuse prevention thresholds.
+                </p>
+              </div>
+
+              {/* Sensitivity Preset Selector */}
+              <div className="space-y-3">
+                <label className="text-xs font-mono font-bold uppercase text-[var(--text-muted)]">
+                  Match Sensitivity Preset
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {[
+                    {
+                      id: 'strict',
+                      name: 'Strict Match',
+                      score: 'Threshold: 0.80',
+                      desc: 'Requires tight temporal and spatial overlap. Minimizes false positives for high-value workplaces.',
+                    },
+                    {
+                      id: 'balanced',
+                      name: 'Balanced (Standard)',
+                      score: 'Threshold: 0.68',
+                      desc: 'Default recommendation. Accommodates partial color or zone matching across active campuses.',
+                    },
+                    {
+                      id: 'lenient',
+                      name: 'Lenient / High Recall',
+                      score: 'Threshold: 0.55',
+                      desc: 'Surfaces tentative matches faster. Great for smaller hostels, gyms, or private events.',
+                    },
+                  ].map((p) => {
+                    const isSelected = settingsSensitivity === p.id;
+                    return (
+                      <div
+                        key={p.id}
+                        onClick={() => setSettingsSensitivity(p.id)}
+                        className={`p-4 rounded-xl border cursor-pointer transition-all ${isSelected
+                            ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 border-neutral-900 dark:border-white shadow-md'
+                            : 'bg-[var(--bg-subtle)] border-[var(--border-subtle)] hover:border-neutral-400'
+                          }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-xs">{p.name}</span>
+                          <span className="text-[10px] font-mono opacity-80">{p.score}</span>
+                        </div>
+                        <p className={`text-[11px] mt-2 leading-relaxed ${isSelected ? 'opacity-90' : 'text-[var(--text-secondary)]'}`}>
+                          {p.desc}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Abuse Thresholds */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                <div className="p-4 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] space-y-2">
+                  <div className="text-xs font-bold text-[var(--text-primary)] flex items-center justify-between">
+                    <span>Min Matching Details</span>
+                    <span className="text-[10px] font-mono text-[var(--text-muted)]">Current: {settingsMinDetails}</span>
+                  </div>
                   <input
-                    type="text"
-                    value={newCatLabel}
-                    onChange={(e) => setNewCatLabel(e.target.value)}
-                    placeholder="Category name (e.g. Audio Gear, Bicycles, Documents)"
-                    className="w-full px-3 py-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card)] text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--border-strong)]"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleAddCategory();
-                      }
-                    }}
+                    type="range"
+                    min="1"
+                    max="4"
+                    value={settingsMinDetails}
+                    onChange={(e) => setSettingsMinDetails(Number(e.target.value))}
+                    className="w-full accent-red-600"
                   />
+                  <p className="text-[11px] text-[var(--text-secondary)]">
+                    Minimum number of non-category attributes (colors, brand, location) required before a match is flagged.
+                  </p>
                 </div>
-                <div className="sm:col-span-4 flex items-center gap-3">
-                  <label className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)] cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={newCatSensitive}
-                      onChange={(e) => setNewCatSensitive(e.target.checked)}
-                      className="rounded border-[var(--border-subtle)] text-red-600 focus:ring-0"
-                    />
-                    <span>Sensitive Item</span>
-                  </label>
-                  <label className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)] cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={newCatAutoApprove}
-                      onChange={(e) => setNewCatAutoApprove(e.target.checked)}
-                      className="rounded border-[var(--border-subtle)] text-emerald-600 focus:ring-0"
-                    />
-                    <span>Auto-Approve</span>
-                  </label>
+
+                <div className="p-4 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] space-y-2">
+                  <div className="text-xs font-bold text-[var(--text-primary)] flex items-center justify-between">
+                    <span>Max Failed Claim Attempts</span>
+                    <span className="text-[10px] font-mono text-[var(--text-muted)]">Current: {settingsMaxAttempts}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="1"
+                    max="10"
+                    value={settingsMaxAttempts}
+                    onChange={(e) => setSettingsMaxAttempts(Number(e.target.value))}
+                    className="w-full accent-red-600"
+                  />
+                  <p className="text-[11px] text-[var(--text-secondary)]">
+                    Claimants who fail verification this many times are locked out of claiming that specific item to prevent guessing.
+                  </p>
                 </div>
-                <div className="sm:col-span-3">
+              </div>
+            </div>
+          )}
+
+          {/* SUB-TAB 5: MEMBERS & ROSTER */}
+          {settingsActiveSubTab === 'members' && (
+            <div className="p-5 sm:p-6 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] shadow-sm space-y-4">
+              <div className="border-b border-[var(--border-subtle)] pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <h4 className="text-xs font-bold text-[var(--text-primary)] font-mono uppercase tracking-wide flex items-center gap-2">
+                    <Users className="w-4 h-4 text-emerald-500" />
+                    <span>Workspace Member Roster &amp; Role Management</span>
+                    <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-neutral-900/10 dark:bg-white/10 text-[var(--text-primary)] border border-[var(--border-subtle)]">
+                      {membersData?.members?.length || 0} MEMBERS
+                    </span>
+                  </h4>
+                  <p className="text-[11px] text-[var(--text-secondary)] mt-0.5">
+                    Promote trusted members to Custody Moderators or Workspace Admins, or remove accounts.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={handleAddCategory}
-                    disabled={!newCatLabel.trim()}
-                    className="w-full py-2 px-3 rounded-lg bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:hover:bg-neutral-200 text-white dark:text-neutral-900 text-xs font-semibold disabled:opacity-40 transition-colors flex items-center justify-center gap-1.5"
+                    onClick={() => setShowStaffModal(true)}
+                    className="px-3 py-1.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-subtle)] text-xs font-semibold text-[var(--text-primary)] flex items-center gap-1.5"
                   >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Add Category</span>
+                    <span>Staff Applications</span>
+                    {pendingModRequests.length > 0 && (
+                      <span className="px-1.5 py-0.2 rounded-full bg-amber-500 text-black text-[10px] font-mono font-bold">
+                        {pendingModRequests.length}
+                      </span>
+                    )}
                   </button>
                 </div>
               </div>
-            </div>
-          </div>
 
-          {/* 3. Modify Accepted Email Domains (Whitelist) */}
-          <div className="p-5 sm:p-6 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] shadow-sm space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-[var(--border-subtle)]">
-              <div>
-                <div className="flex items-center gap-2 text-xs font-bold text-[var(--text-primary)] font-mono uppercase tracking-wide">
-                  <AtSign className="w-4 h-4 text-emerald-500" />
-                  <span>Accepted Member Email Domains</span>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-                    {editDomains.length} WHITELISTED
-                  </span>
-                </div>
-                <p className="text-[11px] text-[var(--text-secondary)] mt-0.5">
-                  Users with these email domains can automatically join this workspace without an admin invite code.
-                </p>
-              </div>
-            </div>
-
-            {/* Domains Tags List */}
-            <div className="flex flex-wrap gap-2 min-h-[40px] p-3 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)]">
-              {editDomains.length === 0 ? (
-                <span className="text-xs text-[var(--text-muted)] italic">
-                  No domains restricted. Workspace is open to any verified email address.
-                </span>
-              ) : (
-                editDomains.map((dom) => (
-                  <span
-                    key={dom}
-                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[var(--bg-card)] border border-[var(--border-subtle)] text-xs font-mono font-medium text-[var(--text-primary)] shadow-xs"
-                  >
-                    <span className="text-emerald-500 font-bold">@</span>
-                    <span>{dom}</span>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveDomainFromOrg(dom)}
-                      className="p-0.5 hover:text-red-500 rounded transition-colors"
-                      title={`Remove ${dom}`}
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                ))
-              )}
-            </div>
-
-            {/* Add Input & Suggestions */}
-            <div className="flex items-center gap-2">
-              <div className="relative flex-1">
-                <span className="absolute left-3 top-2.5 text-xs text-[var(--text-muted)] font-mono">@</span>
+              {/* Member Search Bar */}
+              <div className="relative">
+                <Search className="w-4 h-4 absolute left-3 top-2.5 text-[var(--text-muted)]" />
                 <input
                   type="text"
-                  value={newDomainInput}
-                  onChange={(e) => setNewDomainInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleAddDomainToOrg();
-                    }
-                  }}
-                  placeholder="Enter domain (e.g. bits-pilani.ac.in, sst.scaler.com, org.edu)"
-                  className="w-full pl-7 pr-3 py-2 rounded-lg border border-[var(--border-subtle)] text-xs font-mono bg-[var(--bg-page)] text-[var(--text-primary)] focus:outline-none focus:border-[var(--border-strong)]"
+                  value={memberSearchQuery}
+                  onChange={(e) => setMemberSearchQuery(e.target.value)}
+                  placeholder="Filter members by name or email address..."
+                  className="w-full pl-9 pr-3 py-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-page)] text-xs text-[var(--text-primary)] focus:outline-none"
                 />
               </div>
-              <button
-                type="button"
-                onClick={handleAddDomainToOrg}
-                disabled={!newDomainInput.trim()}
-                className="px-4 py-2 rounded-lg bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:hover:bg-neutral-200 disabled:opacity-40 text-white dark:text-neutral-900 text-xs font-semibold transition-colors flex items-center gap-1.5"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Add Domain</span>
-              </button>
-            </div>
 
-            <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-[var(--text-muted)]">
-              <span>Quick add:</span>
-              {['bits-pilani.ac.in', 'sst.scaler.com', 'scaler.com', 'gmail.com'].map((sug) => (
-                <button
-                  key={sug}
-                  type="button"
-                  onClick={() => {
-                    if (!editDomains.includes(sug)) {
-                      setEditDomains([...editDomains, sug]);
-                    }
-                  }}
-                  disabled={editDomains.includes(sug)}
-                  className="px-2 py-0.5 rounded border border-[var(--border-subtle)] hover:border-emerald-500/50 hover:text-emerald-500 disabled:opacity-40 font-mono text-[10px] transition-colors"
-                >
-                  +{sug}
-                </button>
-              ))}
+              {/* Members Table */}
+              <div className="border border-[var(--border-subtle)] rounded-xl overflow-hidden divide-y divide-[var(--border-subtle)]">
+                {(!membersData?.members || membersData.members.length === 0) ? (
+                  <div className="p-8 text-center text-xs text-[var(--text-muted)]">
+                    No members loaded yet.
+                  </div>
+                ) : (
+                  membersData.members
+                    .filter((m) => {
+                      if (!memberSearchQuery.trim()) return true;
+                      const q = memberSearchQuery.toLowerCase();
+                      return (m.name || '').toLowerCase().includes(q) || (m.email || '').toLowerCase().includes(q);
+                    })
+                    .map((m) => {
+                      const isSelf = m.userId === user?.id;
+                      const isUpdating = updatingMemberId === m.userId;
+
+                      return (
+                        <div
+                          key={m.membershipId || m.userId}
+                          className="p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs bg-[var(--bg-card)] hover:bg-[var(--bg-subtle)] transition-colors"
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-8 h-8 rounded-full bg-neutral-900 dark:bg-neutral-800 text-white flex items-center justify-center text-xs font-bold shrink-0">
+                              {(m.name || 'U').charAt(0).toUpperCase()}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="font-bold text-[var(--text-primary)] flex items-center gap-2">
+                                <span>{m.name || 'Member'}</span>
+                                {isSelf && (
+                                  <span className="text-[10px] font-mono text-emerald-500 font-bold">(You)</span>
+                                )}
+                              </div>
+                              <div className="text-[11px] text-[var(--text-muted)] font-mono truncate">
+                                {m.email} · Joined {new Date(m.joinedAt || Date.now()).toLocaleDateString()}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 self-start sm:self-auto">
+                            <select
+                              value={m.role}
+                              disabled={isSelf || isUpdating}
+                              onChange={(e) => handleUpdateMemberRole(m.userId, e.target.value)}
+                              className="px-2.5 py-1.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-page)] text-xs font-semibold text-[var(--text-primary)] disabled:opacity-50"
+                            >
+                              <option value="member">Member</option>
+                              <option value="moderator">Desk Moderator</option>
+                              <option value="admin">Workspace Admin</option>
+                            </select>
+
+                            {!isSelf && (
+                              <button
+                                type="button"
+                                disabled={isUpdating}
+                                onClick={() => handleRemoveMember(m.userId, m.name)}
+                                className="p-1.5 rounded-lg text-red-500 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-colors"
+                                title="Remove member from workspace"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })
+                )}
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* SUB-TAB 6: INVITE & CUSTODY AUDIT */}
+          {settingsActiveSubTab === 'audit' && (
+            <div className="space-y-5">
+              {/* Access Code & Invite URL Card */}
+              <div className="p-5 sm:p-6 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] shadow-sm space-y-4">
+                <div className="border-b border-[var(--border-subtle)] pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <h4 className="text-xs font-bold text-[var(--text-primary)] font-mono uppercase tracking-wide flex items-center gap-2">
+                      <KeyRound className="w-4 h-4 text-emerald-500" />
+                      <span>Admin Access Code &amp; Rotation Policy</span>
+                    </h4>
+                    <p className="text-[11px] text-[var(--text-secondary)] mt-0.5">
+                      Share this 8-digit code or URL with colleagues to grant automated workspace administrative access.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div className="p-4 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] space-y-2">
+                    <span className="text-[10px] font-mono text-[var(--text-muted)] uppercase">8-Digit Admin Code</span>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xl font-black font-mono tracking-widest text-[var(--text-primary)]">
+                        {orgData?.org?.join?.code || '••••••••'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={copyCode}
+                        className="px-3 py-1.5 rounded-lg bg-[var(--bg-card)] border border-[var(--border-subtle)] text-xs font-semibold flex items-center gap-1.5"
+                      >
+                        {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                        <span>{copied ? 'Copied' : 'Copy Code'}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] space-y-2">
+                    <span className="text-[10px] font-mono text-[var(--text-muted)] uppercase">Direct Join URL</span>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-mono text-[var(--text-secondary)] truncate max-w-[200px]">
+                        {window.location.origin}/join?code={orgData?.org?.join?.code || ''}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleCopyInviteUrl}
+                        className="px-3 py-1.5 rounded-lg bg-[var(--bg-card)] border border-[var(--border-subtle)] text-xs font-semibold flex items-center gap-1.5 shrink-0"
+                      >
+                        {copiedInviteUrl ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                        <span>{copiedInviteUrl ? 'Copied' : 'Copy URL'}</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Code Rotation Action */}
+                <div className="p-4 rounded-xl bg-[var(--bg-page)] border border-[var(--border-subtle)] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="space-y-0.5">
+                    <div className="text-xs font-bold text-[var(--text-primary)]">Rotate Access Code Expiry</div>
+                    <div className="text-[11px] text-[var(--text-secondary)]">
+                      Invalidates the previous access code and issues a brand-new 8-digit key.
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={rotateExpiryDays}
+                      onChange={(e) => setRotateExpiryDays(Number(e.target.value))}
+                      className="px-3 py-1.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card)] text-xs font-mono"
+                    >
+                      <option value="7">Expires in 7 days</option>
+                      <option value="30">Expires in 30 days</option>
+                      <option value="90">Expires in 90 days</option>
+                      <option value="0">No Expiry (Permanent)</option>
+                    </select>
+
+                    <button
+                      type="button"
+                      onClick={handleRotateCode}
+                      disabled={rotatingCode}
+                      className="px-4 py-1.5 rounded-lg bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 text-xs font-bold disabled:opacity-40 flex items-center gap-1.5"
+                    >
+                      {rotatingCode ? <RotateCw className="w-3.5 h-3.5 animate-spin" /> : <RotateCw className="w-3.5 h-3.5" />}
+                      <span>Rotate Code</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Accepted Email Domains Whitelist */}
+              <div className="p-5 sm:p-6 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] shadow-sm space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-[var(--border-subtle)]">
+                  <div>
+                    <div className="flex items-center gap-2 text-xs font-bold text-[var(--text-primary)] font-mono uppercase tracking-wide">
+                      <AtSign className="w-4 h-4 text-emerald-500" />
+                      <span>Accepted Member Email Domains</span>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                        {editDomains.length} WHITELISTED
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-[var(--text-secondary)] mt-0.5">
+                      Users with these verified email domains can automatically join this workspace without an admin invite code.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-2 min-h-[40px] p-3 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)]">
+                  {editDomains.length === 0 ? (
+                    <span className="text-xs text-[var(--text-muted)] italic">
+                      No domains restricted. Workspace is open to any verified email address.
+                    </span>
+                  ) : (
+                    editDomains.map((dom) => (
+                      <span
+                        key={dom}
+                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[var(--bg-card)] border border-[var(--border-subtle)] text-xs font-mono font-medium text-[var(--text-primary)] shadow-xs"
+                      >
+                        <span className="text-emerald-500 font-bold">@</span>
+                        <span>{dom}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveDomainFromOrg(dom)}
+                          className="p-0.5 hover:text-red-500 rounded transition-colors"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <span className="absolute left-3 top-2.5 text-xs text-[var(--text-muted)] font-mono">@</span>
+                    <input
+                      type="text"
+                      value={newDomainInput}
+                      onChange={(e) => setNewDomainInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddDomainToOrg();
+                        }
+                      }}
+                      placeholder="Enter domain (e.g. bits-pilani.ac.in, sst.scaler.com)"
+                      className="w-full pl-7 pr-3 py-2 rounded-lg border border-[var(--border-subtle)] text-xs font-mono bg-[var(--bg-page)] text-[var(--text-primary)] focus:outline-none"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAddDomainToOrg}
+                    disabled={!newDomainInput.trim()}
+                    className="px-4 py-2 rounded-lg bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 text-xs font-semibold disabled:opacity-40"
+                  >
+                    + Add Domain
+                  </button>
+                </div>
+              </div>
+
+              {/* Immutable Custody Transfer Audit Log & CSV Export Card */}
+              <div className="p-5 sm:p-6 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] shadow-sm space-y-4">
+                <div className="border-b border-[var(--border-subtle)] pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <h4 className="text-xs font-bold text-[var(--text-primary)] font-mono uppercase tracking-wide flex items-center gap-2">
+                      <History className="w-4 h-4 text-rose-500" />
+                      <span>Immutable Custody Transfer Log &amp; Audit Trail</span>
+                    </h4>
+                    <p className="text-[11px] text-[var(--text-secondary)] mt-0.5">
+                      Cryptographically verifiable and immutable chain of physical property handovers, verification attempts, and moderator decisions.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleDownloadAuditCsv}
+                    className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-md flex items-center gap-2 self-start sm:self-auto"
+                  >
+                    <Download className="w-3.5 h-3.5 stroke-[2.5]" />
+                    <span>Download Custody Log (CSV)</span>
+                  </button>
+                </div>
+
+                {/* Audit Log Table */}
+                <div className="border border-[var(--border-subtle)] rounded-xl overflow-hidden divide-y divide-[var(--border-subtle)]">
+                  {auditLoading ? (
+                    <div className="p-8 text-center text-xs text-[var(--text-muted)] flex items-center justify-center gap-2">
+                      <RotateCw className="w-4 h-4 animate-spin" />
+                      <span>Loading custody transfer records...</span>
+                    </div>
+                  ) : (!auditData?.logs || auditData.logs.length === 0) ? (
+                    <div className="p-8 text-center text-xs text-[var(--text-muted)]">
+                      No custody transfer events recorded yet.
+                    </div>
+                  ) : (
+                    auditData.logs.map((log) => {
+                      const isHandover = log.action === 'HANDOVER_VERIFIED';
+                      const isApproved = log.action === 'CLAIM_APPROVED';
+                      const isLockout = log.action === 'HANDOVER_LOCKED_ABUSE';
+                      const isRejected = log.action === 'CLAIM_REJECTED';
+
+                      return (
+                        <div
+                          key={log._id}
+                          className="p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs bg-[var(--bg-card)] hover:bg-[var(--bg-subtle)] transition-colors"
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <span
+                              className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase ${isHandover
+                                  ? 'bg-emerald-500/15 text-emerald-500 border border-emerald-500/30'
+                                  : isApproved
+                                    ? 'bg-blue-500/15 text-blue-500 border border-blue-500/30'
+                                    : isLockout
+                                      ? 'bg-red-500/15 text-red-500 border border-red-500/30'
+                                      : isRejected
+                                        ? 'bg-amber-500/15 text-amber-500 border border-amber-500/30'
+                                        : 'bg-[var(--bg-subtle)] text-[var(--text-secondary)] border border-[var(--border-subtle)]'
+                                }`}
+                            >
+                              {log.action}
+                            </span>
+                            <div>
+                              <div className="font-semibold text-[var(--text-primary)]">
+                                {log.actor?.name || 'Staff Moderator'}
+                                <span className="text-[10px] font-mono text-[var(--text-muted)] font-normal ml-1.5">
+                                  ({log.actor?.email})
+                                </span>
+                              </div>
+                              <div className="text-[10px] font-mono text-[var(--text-muted)]">
+                                Target: {log.targetType} #{String(log.targetId).slice(-6)}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="text-right text-[11px] font-mono text-[var(--text-muted)]">
+                            {new Date(log.createdAt).toLocaleString()}
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Sticky Bottom Save Action */}
           <div className="p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] flex items-center justify-between shadow-md">
             <div>
               <div className="text-xs font-bold text-[var(--text-primary)]">Ready to commit workspace changes?</div>
-              <div className="text-[11px] text-[var(--text-secondary)]">All places, item categories, and email domains will update immediately.</div>
+              <div className="text-[11px] text-[var(--text-secondary)]">All places, item categories, policy presets, and email domains will update immediately.</div>
             </div>
             <button
               type="button"
@@ -2632,11 +3424,10 @@ export default function OrgHomePage() {
                       {isPrivileged ? 'Operational Intelligence & Trends' : 'Lost & Found Activity Trends'}
                     </h3>
                     <span
-                      className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${
-                        isPrivileged
+                      className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${isPrivileged
                           ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
                           : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-                      }`}
+                        }`}
                     >
                       {isPrivileged ? 'STAFF & ADMIN VIEW · CONFIDENTIAL' : 'COMMUNITY VIEW'}
                     </span>
@@ -2664,11 +3455,10 @@ export default function OrgHomePage() {
               <button
                 type="button"
                 onClick={() => setDigestSubTab('trends')}
-                className={`px-3.5 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors whitespace-nowrap ${
-                  digestSubTab === 'trends'
+                className={`px-3.5 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors whitespace-nowrap ${digestSubTab === 'trends'
                     ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 shadow-xs'
                     : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-subtle)]'
-                }`}
+                  }`}
               >
                 {isPrivileged ? <BarChart3 className="w-3.5 h-3.5" /> : <TrendingUp className="w-3.5 h-3.5" />}
                 <span>{isPrivileged ? 'Visual Analytics & Trend Graphs' : 'Activity Trends & Charts'}</span>
@@ -2678,11 +3468,10 @@ export default function OrgHomePage() {
                 <button
                   type="button"
                   onClick={() => setDigestSubTab('playbook')}
-                  className={`px-3.5 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors whitespace-nowrap ${
-                    digestSubTab === 'playbook'
+                  className={`px-3.5 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors whitespace-nowrap ${digestSubTab === 'playbook'
                       ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 shadow-xs'
                       : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-subtle)]'
-                  }`}
+                    }`}
                 >
                   <ShieldCheck className="w-3.5 h-3.5" />
                   <span>Asset Protection &amp; Safety Playbook</span>
@@ -2691,11 +3480,10 @@ export default function OrgHomePage() {
                 <button
                   type="button"
                   onClick={() => setDigestSubTab('tips')}
-                  className={`px-3.5 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors whitespace-nowrap ${
-                    digestSubTab === 'tips'
+                  className={`px-3.5 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors whitespace-nowrap ${digestSubTab === 'tips'
                       ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 shadow-xs'
                       : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-subtle)]'
-                  }`}
+                    }`}
                 >
                   <Lightbulb className="w-3.5 h-3.5" />
                   <span>Safe Campus Tips</span>
@@ -2895,11 +3683,10 @@ export default function OrgHomePage() {
                                 x={x}
                                 y={padTop + chartH + 18}
                                 textAnchor="middle"
-                                className={`text-[10px] font-mono transition-colors ${
-                                  isHovered
+                                className={`text-[10px] font-mono transition-colors ${isHovered
                                     ? 'fill-[var(--text-primary)] font-bold'
                                     : 'fill-[var(--text-muted)]'
-                                }`}
+                                  }`}
                               >
                                 {d.dayLabel}
                               </text>
@@ -3151,22 +3938,20 @@ export default function OrgHomePage() {
                                 <button
                                   type="button"
                                   onClick={() => setBarChartMode('categories')}
-                                  className={`px-2.5 py-1 rounded-md transition-colors ${
-                                    barChartMode === 'categories'
+                                  className={`px-2.5 py-1 rounded-md transition-colors ${barChartMode === 'categories'
                                       ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 shadow-xs'
                                       : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
-                                  }`}
+                                    }`}
                                 >
                                   By Category
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => setBarChartMode('locations')}
-                                  className={`px-2.5 py-1 rounded-md transition-colors ${
-                                    barChartMode === 'locations'
+                                  className={`px-2.5 py-1 rounded-md transition-colors ${barChartMode === 'locations'
                                       ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 shadow-xs'
                                       : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
-                                  }`}
+                                    }`}
                                 >
                                   By Location
                                 </button>
@@ -3317,11 +4102,10 @@ export default function OrgHomePage() {
                                     {item.category || 'Physical Security'}
                                   </span>
                                   <span
-                                    className={`px-2 py-0.5 rounded text-[9px] font-mono font-bold uppercase ${
-                                      item.impact === 'High'
+                                    className={`px-2 py-0.5 rounded text-[9px] font-mono font-bold uppercase ${item.impact === 'High'
                                         ? 'bg-red-500/10 text-red-500 border border-red-500/20'
                                         : 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
-                                    }`}
+                                      }`}
                                   >
                                     {item.impact || 'High'} Impact
                                   </span>

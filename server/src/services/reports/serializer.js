@@ -52,6 +52,9 @@ export function publicView(report, categoryConfig = null, locations = []) {
     occurredFrom: doc.occurredFrom,
     occurredTo: doc.occurredTo,
     photo: doc.photo,
+    // Keep the legacy flat field for existing clients while the nested photo
+    // object remains the canonical representation.
+    photoUrl: doc.photoMasked ? null : (doc.photo?.url ?? doc.photoUrl ?? null),
     photoMasked: doc.photoMasked,
     expiresAt: doc.expiresAt,
     createdAt: doc.createdAt,

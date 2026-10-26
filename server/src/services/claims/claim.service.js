@@ -4,6 +4,7 @@ import { AuditLog } from '../../models/AuditLog.js';
 import { ApiError } from '../../utils/ApiError.js';
 import { evaluateClaimAnswers } from './verify.js';
 import { publicView } from '../reports/serializer.js';
+import { createNotification } from '../notification.service.js';
 
 export async function createClaim(org, user, payload) {
   const { foundId, lostId = null, answers = [] } = payload;
@@ -152,9 +153,15 @@ export async function getMyClaims(orgId, userId, org) {
     });
 }
 
-export async function getClaimById(orgId, claimId, user, org) {
+export async function getClaimById(orgId, claimId, user, role, org) {
   const claim = await Claim.findOne({ _id: claimId, orgId }).populate('foundId');
   if (!claim) {
+    throw new ApiError(404, 'CLAIM_NOT_FOUND', 'Claim record not found');
+  }
+
+  const isStaff = role === 'admin' || role === 'moderator';
+  if (!isStaff && claim.claimantId.toString() !== user._id.toString()) {
+    // Keep claim existence and pickup codes private from other members.
     throw new ApiError(404, 'CLAIM_NOT_FOUND', 'Claim record not found');
   }
 
@@ -237,11 +244,11 @@ export async function getOrgClaims(orgId, filters = {}, org) {
       finderPrivateDetails,
       claimant: c.claimantId
         ? {
-            id: c.claimantId._id,
-            name: c.claimantId.name,
-            email: c.claimantId.email,
-            avatar: c.claimantId.avatar,
-          }
+          id: c.claimantId._id,
+          name: c.claimantId.name,
+          email: c.claimantId.email,
+          avatar: c.claimantId.avatar,
+        }
         : null,
       foundItem: publicView(c.foundId, categoryConfig, org.locations),
     };
@@ -279,6 +286,16 @@ export async function reviewClaim(orgId, claimId, moderatorUser, { action, decis
         handoverCode: claim.handoverCode,
       },
     });
+
+    await createNotification({
+      orgId,
+      userId: claim.claimantId,
+      type: 'claim_approved',
+      title: 'Claim Approved! Handover Code Ready',
+      message: `Your ownership claim has been verified. Present 6-digit code ${claim.handoverCode} at the drop-off desk to retrieve your item.`,
+      link: `/o/${org?.slug || ''}/activity`,
+      meta: { claimId: claim._id, handoverCode: claim.handoverCode },
+    });
   } else if (action === 'reject') {
     claim.status = 'rejected';
     claim.moderatorId = moderatorUser._id;
@@ -301,6 +318,16 @@ export async function reviewClaim(orgId, claimId, moderatorUser, { action, decis
         reason: claim.decisionNote,
       },
     });
+
+    await createNotification({
+      orgId,
+      userId: claim.claimantId,
+      type: 'claim_rejected',
+      title: 'Claim Update: Request Declined',
+      message: claim.decisionNote || 'Your claim could not be verified by the custody desk staff.',
+      link: `/o/${org?.slug || ''}/activity`,
+      meta: { claimId: claim._id },
+    });
   } else if (action === 'request_info') {
     claim.status = 'needs_info';
     claim.moderatorId = moderatorUser._id;
@@ -319,6 +346,16 @@ export async function reviewClaim(orgId, claimId, moderatorUser, { action, decis
         claimantId: claim.claimantId,
         note: claim.decisionNote,
       },
+    });
+
+    await createNotification({
+      orgId,
+      userId: claim.claimantId,
+      type: 'status_update',
+      title: 'More Information Requested for Claim',
+      message: claim.decisionNote || 'Desk staff requested additional details to verify your claim.',
+      link: `/o/${org?.slug || ''}/activity`,
+      meta: { claimId: claim._id },
     });
   } else {
     throw new ApiError(400, 'INVALID_ACTION', "Action must be 'approve', 'reject', or 'request_info'");
@@ -405,7 +442,18 @@ export async function verifyHandover(orgId, payload, moderatorUser, org) {
       lostId: claim.lostId || null,
       claimantId: claim.claimantId?._id || claim.claimantId,
       handoverCode: cleanCode,
-    },
+    }
+  })
+
+  const claimantUserId = claim.claimantId?._id || claim.claimantId;
+  await createNotification({
+    orgId,
+    userId: claimantUserId,
+    type: 'handover_ready',
+    title: 'Custody Handover Completed',
+    message: 'Your item was successfully handed over and custody transfer has been verified at the desk.',
+    link: `/o/${org?.slug || ''}/activity`,
+    meta: { claimId: claim._id },
   });
 
   const categoryConfig = org.categories?.find((cat) => cat.key === claim.foundId.category);

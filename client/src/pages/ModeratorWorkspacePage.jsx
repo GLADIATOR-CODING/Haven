@@ -65,6 +65,7 @@ export default function ModeratorWorkspacePage({ initialTab = null }) {
   const [processingReportId, setProcessingReportId] = useState(null);
   const [modalAction, setModalAction] = useState(null); // { type: 'reject'|'request_info', claim: obj }
   const [customNote, setCustomNote] = useState('');
+  const [actionError, setActionError] = useState(null);
 
   // 1. Fetch organization details
   const { data: orgData } = useQuery({
@@ -114,6 +115,12 @@ export default function ModeratorWorkspacePage({ initialTab = null }) {
     }
   }, [location.pathname]);
 
+  useEffect(() => {
+    if (!actionError) return undefined;
+    const timer = window.setTimeout(() => setActionError(null), 4500);
+    return () => window.clearTimeout(timer);
+  }, [actionError]);
+
   const handleTabChange = (newTab) => {
     setActiveTab(newTab);
     if (newTab === 'handover') {
@@ -150,6 +157,7 @@ export default function ModeratorWorkspacePage({ initialTab = null }) {
   /* CLAIM REVIEW ACTIONS (APPROVE, REJECT, REQUEST INFO) */
   const handleReviewClaim = async (claimId, action, decisionNote = '') => {
     setProcessingClaimId(claimId);
+    setActionError(null);
     try {
       await api.patch(`/api/o/${slug}/claims/${claimId}/review`, {
         action,
@@ -160,7 +168,7 @@ export default function ModeratorWorkspacePage({ initialTab = null }) {
       await refetchClaims();
       queryClient.invalidateQueries(['myClaims', slug]);
     } catch (err) {
-      alert(err.message || 'Failed to update claim.');
+      setActionError(err.message || 'Failed to update claim.');
     } finally {
       setProcessingClaimId(null);
     }
@@ -169,12 +177,13 @@ export default function ModeratorWorkspacePage({ initialTab = null }) {
   /* PENDING INTAKE REPORT REVIEW (APPROVE TO FEED OR REJECT) */
   const handleReviewReport = async (reportId, action) => {
     setProcessingReportId(reportId);
+    setActionError(null);
     try {
-      await api.patch(`/api/o/${slug}/reports/${reportId}/review`, { action });
+      await api.post(`/api/o/${slug}/reports/${reportId}/review`, { action });
       await refetchPendingReports();
       queryClient.invalidateQueries(['foundFeedFiltered', slug]);
     } catch (err) {
-      alert(err.message || 'Failed to review intake report.');
+      setActionError(err.message || 'Failed to review intake report.');
     } finally {
       setProcessingReportId(null);
     }
@@ -214,7 +223,13 @@ export default function ModeratorWorkspacePage({ initialTab = null }) {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-10 space-y-6">
+    <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-10 py-8 sm:py-12 space-y-8">
+      {actionError && (
+        <div role="alert" className="flex items-center justify-between gap-3 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs font-medium text-red-700 shadow-sm dark:text-red-300">
+          <span className="flex items-center gap-2"><AlertCircle className="h-4 w-4 shrink-0" />{actionError}</span>
+          <button type="button" onClick={() => setActionError(null)} className="rounded p-1 hover:bg-red-500/10" aria-label="Dismiss error"><X className="h-4 w-4" /></button>
+        </div>
+      )}
       {/* Top Station Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[var(--border-subtle)]">
         <div className="space-y-1">

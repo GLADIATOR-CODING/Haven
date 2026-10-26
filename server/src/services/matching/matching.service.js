@@ -4,6 +4,7 @@ import { scorePair, scorePairAsync } from './scorer.js';
 import { generateExplanation } from './explainer.js';
 import { publicView } from '../reports/serializer.js';
 import { ApiError } from '../../utils/ApiError.js';
+import { createNotification } from '../notification.service.js';
 
 /**
  * Inline matching service: Triggered right after a report is created or updated.
@@ -62,6 +63,18 @@ export async function runMatchingForReport(report, org) {
         { upsert: true, new: true }
       );
 
+      if (lostReport.userId) {
+        await createNotification({
+          orgId: org._id,
+          userId: lostReport.userId,
+          type: 'match_found',
+          title: 'New Match Found',
+          message: `A found item closely matches your lost item with ${(scoreResult.score * 100).toFixed(0)}% confidence: ${explanation.headline}`,
+          link: `/o/${org.slug || ''}/activity`,
+          meta: { lostId: lostReport._id, foundId: foundReport._id, score: scoreResult.score },
+        });
+      }
+
       const categoryConfig = org.categories?.find((c) => c.key === report.category);
       const pairedReport = isLost ? foundReport : lostReport;
 
@@ -90,7 +103,17 @@ export async function runMatchingForReport(report, org) {
 /**
  * Get matches for a specific report (sanitized via publicView).
  */
-export async function getMatchesForReport(orgId, reportId, user, org) {
+export async function getMatchesForReport(orgId, reportId, user, role, org) {
+  const report = await Report.findOne({ _id: reportId, orgId }).select('reporterId');
+  if (!report) {
+    throw new ApiError(404, 'REPORT_NOT_FOUND', 'Report not found');
+  }
+
+  const isStaff = role === 'admin' || role === 'moderator';
+  if (!isStaff && report.reporterId.toString() !== user._id.toString()) {
+    throw new ApiError(404, 'REPORT_NOT_FOUND', 'Report not found');
+  }
+
   const matches = await Match.find({
     orgId,
     $or: [{ lostId: reportId }, { foundId: reportId }],
@@ -125,16 +148,20 @@ export async function getMatchesForReport(orgId, reportId, user, org) {
 /**
  * Dismiss a suggested match.
  */
-export async function dismissMatch(orgId, matchId) {
-  const match = await Match.findOneAndUpdate(
-    { _id: matchId, orgId },
-    { status: 'dismissed' },
-    { new: true }
-  );
+export async function dismissMatch(orgId, matchId, user, role) {
+  const match = await Match.findOne({ _id: matchId, orgId }).populate('lostId', 'reporterId');
 
   if (!match) {
     throw new ApiError(404, 'MATCH_NOT_FOUND', 'Match not found');
   }
+
+  const isStaff = role === 'admin' || role === 'moderator';
+  if (!isStaff && match.lostId?.reporterId?.toString() !== user._id.toString()) {
+    throw new ApiError(404, 'MATCH_NOT_FOUND', 'Match not found');
+  }
+
+  match.status = 'dismissed';
+  await match.save();
 
   return match;
 }

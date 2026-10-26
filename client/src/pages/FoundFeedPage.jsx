@@ -104,7 +104,7 @@ export default function FoundFeedPage() {
   const hasActiveFilters = !!(selectedCategory || selectedLocation || selectedColor || searchQuery);
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-10 space-y-8">
+    <div className="max-w-6xl mx-auto px-5 sm:px-8 py-8 sm:py-12 space-y-10">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[var(--border-subtle)]">
         <div className="space-y-1">

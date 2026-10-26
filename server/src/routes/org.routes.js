@@ -4,6 +4,8 @@ import * as orgController from '../controllers/org.controller.js';
 import reportRoutes from './report.routes.js';
 import aiRoutes from './ai.routes.js';
 import claimRoutes from './claim.routes.js';
+import auditRoutes from './audit.routes.js';
+import notificationRoutes from './notification.routes.js';
 import { auth } from '../middlewares/auth.js';
 import { orgScope } from '../middlewares/orgScope.js';
 import { authorize } from '../middlewares/authorize.js';
@@ -66,6 +68,12 @@ scopedOrgRouter.use('/ai', aiRoutes);
 // Claims subroutes
 scopedOrgRouter.use('/claims', claimRoutes);
 
+// Custody audit log subroutes
+scopedOrgRouter.use('/audit', auditRoutes);
+
+// In-app notifications subroutes
+scopedOrgRouter.use('/notifications', notificationRoutes);
+
 // Moderator requests
 import * as modReqController from '../controllers/moderatorRequest.controller.js';
 scopedOrgRouter.post('/moderator-requests', modReqController.createRequest);
@@ -77,4 +85,5 @@ scopedOrgRouter.patch('/', authorize('admin'), orgController.updateOrgConfig);
 scopedOrgRouter.post('/invite/rotate', authorize('admin'), orgController.rotateInviteCode);
 scopedOrgRouter.get('/members', authorize('admin'), orgController.getMembers);
 scopedOrgRouter.patch('/members/:userId', authorize('admin'), validate(updateRoleSchema), orgController.updateMemberRole);
+scopedOrgRouter.delete('/members/:userId', authorize('admin'), orgController.removeMember);
 

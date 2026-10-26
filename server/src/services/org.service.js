@@ -121,6 +121,10 @@ export async function joinOrg(payload, userId) {
     const normalizedCode = code.trim().toUpperCase();
     const orgByCode = await Organization.findOne({ 'join.code': normalizedCode });
     if (orgByCode) {
+      if (orgByCode.join?.expiresAt && new Date() > new Date(orgByCode.join.expiresAt)) {
+        throw new ApiError(400, 'INVITE_CODE_EXPIRED', 'This 8-digit access code has expired. Please ask your administrator to rotate the workspace invite code.');
+      }
+
       if (caller.email?.endsWith('@haven.local') && !['demo-campus', 'demo-office'].includes(orgByCode.slug)) {
         throw new ApiError(403, 'DEMO_ACCOUNT_RESTRICTED', 'Pre-seeded demo accounts are restricted to demo workspaces.');
       }
@@ -196,22 +200,32 @@ export async function joinOrgByCode(code, userId) {
   return joinOrg({ code }, userId);
 }
 
-export async function rotateInviteCode(orgId) {
+export async function rotateInviteCode(orgId, expiresInDays = 30) {
   let newCode = generateInviteCode();
   while (await Organization.findOne({ 'join.code': newCode })) {
     newCode = generateInviteCode();
   }
 
+  const now = new Date();
+  const parsedDays = Number(expiresInDays);
+  const expiresAt = parsedDays > 0 ? new Date(now.getTime() + parsedDays * 24 * 60 * 60 * 1000) : null;
+
+  const updateFields = {
+    'join.code': newCode,
+    'join.rotatedAt': now,
+    'join.expiresAt': expiresAt,
+  };
+  if (parsedDays > 0) {
+    updateFields['join.expiryDays'] = parsedDays;
+  }
+
   const org = await Organization.findByIdAndUpdate(
     orgId,
-    {
-      'join.code': newCode,
-      'join.rotatedAt': new Date(),
-    },
+    { $set: updateFields },
     { new: true }
   );
 
-  return { code: org.join.code, rotatedAt: org.join.rotatedAt };
+  return { code: org.join.code, rotatedAt: org.join.rotatedAt, expiresAt: org.join.expiresAt, expiryDays: org.join.expiryDays };
 }
 
 export async function updateOrgSettings(orgId, updateData) {
@@ -284,4 +298,17 @@ export async function updateMemberRole(orgId, targetUserId, newRole, currentAdmi
   }
 
   return membership;
+}
+
+export async function removeMember(orgId, targetUserId, currentAdminId) {
+  if (targetUserId.toString() === currentAdminId.toString()) {
+    throw new ApiError(400, 'CANNOT_REMOVE_SELF', 'Admins cannot remove themselves from their workspace.');
+  }
+
+  const deleted = await Membership.findOneAndDelete({ orgId, userId: targetUserId });
+  if (!deleted) {
+    throw new ApiError(404, 'MEMBER_NOT_FOUND', 'Membership record not found.');
+  }
+
+  return { success: true, removedUserId: targetUserId };
 }
