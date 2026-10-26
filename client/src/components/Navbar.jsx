@@ -135,24 +135,43 @@ export default function Navbar() {
   };
 
   const currentPath = location.pathname;
+  const isLanding = currentPath === '/';
 
   return (
-    <header className="sticky top-2 sm:top-5 z-50 px-3 sm:px-6 lg:px-8 pointer-events-none">
-      <div className="max-w-[90rem] mx-auto pointer-events-auto rounded-full bg-black/90 dark:bg-black/95 text-white border border-neutral-800/80 shadow-[0_12px_40px_rgba(0,0,0,0.6)] backdrop-blur-xl px-3.5 sm:px-6 lg:px-7 h-12 sm:h-16 flex items-center justify-between gap-3 sm:gap-5 lg:gap-8 transition-all">
+    <header className="sticky top-2 sm:top-5 z-50 px-3 sm:px-6 lg:px-8 pointer-events-none transition-all duration-500">
+      <div
+        className={`mx-auto pointer-events-auto rounded-full bg-black/90 dark:bg-black/95 text-white border border-neutral-800/80 shadow-[0_12px_40px_rgba(0,0,0,0.6)] backdrop-blur-xl flex items-center justify-between transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+          isLanding
+            ? 'max-w-xl sm:max-w-2xl lg:max-w-3xl h-11 sm:h-14 px-3.5 sm:px-5 gap-2.5 sm:gap-4'
+            : 'max-w-[90rem] h-12 sm:h-16 px-3.5 sm:px-6 lg:px-7 gap-3 sm:gap-5 lg:gap-8'
+        }`}
+      >
         {/* Left: Brand & Workspace Selector */}
         <div className="flex min-w-0 items-center gap-2.5 sm:gap-3 flex-shrink-0">
-          <Link to="/" className="flex items-center gap-2 group">
-            <div className="w-8 h-8 rounded-xl bg-neutral-900 border border-neutral-700/80 shadow-inner flex items-center justify-center text-white group-hover:scale-105 transition-transform">
-              <Shield className="w-4 h-4 fill-white text-white" />
+          <Link to="/" className="flex items-center gap-2 group flex-shrink-0">
+            <div
+              className={`rounded-xl bg-neutral-900 border border-neutral-700/80 shadow-inner flex items-center justify-center text-white group-hover:scale-105 transition-all ${
+                isLanding ? 'w-7 h-7 sm:w-8 sm:h-8' : 'w-8 h-8'
+              }`}
+            >
+              <Shield
+                className={`fill-white text-white transition-all ${
+                  isLanding ? 'w-3.5 h-3.5 sm:w-4 sm:h-4' : 'w-4 h-4'
+                }`}
+              />
             </div>
-            <span className="font-extrabold text-base tracking-tight text-white">
+            <span
+              className={`font-extrabold tracking-tight text-white transition-all ${
+                isLanding ? 'text-sm sm:text-base' : 'text-base'
+              }`}
+            >
               Haven
             </span>
           </Link>
 
-          {/* Workspace Selector Pill */}
-          {user && (activeMembership || activeSlug) && (
-            <div className="relative" ref={dropdownRef}>
+          {/* Workspace Selector Pill (shown when inside a workspace or subpage) */}
+          {!isLanding && user && (activeMembership || activeSlug) && (
+            <div className="relative animate-in fade-in zoom-in-95 duration-300" ref={dropdownRef}>
               <button
                 onClick={() => setOrgDropdownOpen((p) => !p)}
                 className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-xs font-medium text-neutral-300 transition-colors"
@@ -222,7 +241,7 @@ export default function Navbar() {
 
         {/* Center: Clean Uncluttered Tabs */}
         <nav className="hidden md:flex min-w-0 items-center justify-center gap-4 lg:gap-5 text-[13px] font-medium whitespace-nowrap">
-          {activeSlug ? (
+          {activeSlug && !isLanding ? (
             <>
               <Link
                 to={`/o/${activeSlug}`}
@@ -324,9 +343,9 @@ export default function Navbar() {
         </nav>
 
         {/* Right: Consolidated Action & Controls */}
-          <div className="flex items-center gap-2 sm:gap-2.5 flex-shrink-0">
-          {activeSlug ? (
-            <div className="relative" ref={reportDropdownRef}>
+        <div className="flex items-center gap-2 sm:gap-2.5 flex-shrink-0">
+          {activeSlug && !isLanding ? (
+            <div className="relative animate-in fade-in zoom-in-95 duration-300" ref={reportDropdownRef}>
               <button
                 onClick={() => setReportDropdownOpen((p) => !p)}
                 className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white hover:bg-neutral-200 text-black text-xs font-bold transition-all shadow-md whitespace-nowrap"
@@ -371,7 +390,9 @@ export default function Navbar() {
           ) : (
             <Link
               to="/orgs/new"
-              className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-full bg-white hover:bg-neutral-200 text-black text-xs font-bold transition-all shadow-md whitespace-nowrap"
+              className={`flex items-center gap-1.5 rounded-full bg-white hover:bg-neutral-200 text-black font-bold transition-all shadow-md whitespace-nowrap ${
+                isLanding ? 'px-3 sm:px-3.5 py-1 sm:py-1.5 text-xs' : 'px-3 sm:px-4 py-1.5 text-xs'
+              }`}
             >
               <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
               <span>Create Workspace</span>
@@ -379,8 +400,8 @@ export default function Navbar() {
           )}
 
           {/* Notification Hub */}
-          {user && activeSlug && (
-            <div className="relative" ref={notifDropdownRef}>
+          {!isLanding && user && activeSlug && (
+            <div className="relative animate-in fade-in zoom-in-95 duration-300" ref={notifDropdownRef}>
               <button
                 onClick={() => setNotifDropdownOpen((p) => !p)}
                 className="w-8 h-8 rounded-full bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300 hover:text-white flex items-center justify-center transition-colors relative"
@@ -498,7 +519,9 @@ export default function Navbar() {
           {/* Theme Toggle Button */}
           <button
             onClick={toggleTheme}
-            className="w-8 h-8 rounded-full bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300 hover:text-white flex items-center justify-center transition-colors"
+            className={`rounded-full bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300 hover:text-white flex items-center justify-center transition-all ${
+              isLanding ? 'w-7 h-7 sm:w-8 sm:h-8' : 'w-8 h-8'
+            }`}
             title={isDark ? 'Switch to Light mode' : 'Switch to Dark mode'}
             aria-label="Toggle theme"
           >
@@ -514,7 +537,9 @@ export default function Navbar() {
             <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
               <Link
                 to="/profile"
-                className="flex max-w-[172px] items-center gap-2 pl-1.5 pr-2.5 py-1.5 rounded-full bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-xs text-white transition-all group"
+                className={`flex max-w-[172px] items-center gap-2 pl-1.5 pr-2.5 rounded-full bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-xs text-white transition-all group ${
+                  isLanding ? 'py-1' : 'py-1.5'
+                }`}
                 title="Account Dashboard & Roles"
               >
                 <div className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center text-[10px] font-bold overflow-hidden flex-shrink-0">
@@ -524,10 +549,10 @@ export default function Navbar() {
                     (user.name || 'U').charAt(0).toUpperCase()
                   )}
                 </div>
-                  <span className="hidden sm:inline min-w-0 font-medium text-neutral-200 group-hover:text-white max-w-[100px] lg:max-w-[130px] truncate">
+                <span className="hidden sm:inline min-w-0 font-medium text-neutral-200 group-hover:text-white max-w-[100px] lg:max-w-[130px] truncate">
                   {user.name || 'Account'}
                 </span>
-                {currentWorkspaceRole && (
+                {currentWorkspaceRole && !isLanding && (
                   <span
                     className={`hidden lg:inline px-1.5 py-0.5 rounded text-[9px] font-mono font-bold uppercase ${
                       currentWorkspaceRole === 'admin'
@@ -545,7 +570,9 @@ export default function Navbar() {
           ) : (
             <Link
               to="/login"
-              className="px-3 py-1.5 text-xs font-medium text-neutral-300 hover:text-white transition-colors"
+              className={`font-medium text-neutral-300 hover:text-white transition-colors ${
+                isLanding ? 'px-2.5 py-1 text-xs' : 'px-3 py-1.5 text-xs'
+              }`}
             >
               Sign In
             </Link>
