@@ -720,7 +720,7 @@ export default function OrgHomePage() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-10 py-10 sm:py-12 space-y-8">
+    <div className="max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 py-4 sm:py-10 space-y-4 sm:space-y-8 w-full max-w-full overflow-hidden">
       {notice && (
         <div
           role="status"
@@ -753,38 +753,40 @@ export default function OrgHomePage() {
             </span>
           </div>
 
-          <div className="flex items-center gap-1.5 text-xs">
-            <span className="text-[11px] font-mono text-[var(--text-muted)] mr-1">Switch Role:</span>
-            <button
-              onClick={() => handleSwitchDemoRole('member')}
-              disabled={switchingRole || currentRole === 'member'}
-              className={`px-3 py-1 rounded-md font-semibold transition-colors border ${currentRole === 'member'
-                ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 border-transparent shadow-xs'
-                : 'bg-[var(--bg-card)] text-[var(--text-primary)] border-[var(--border-subtle)] hover:border-[var(--border-strong)]'
-                }`}
-            >
-              Member (Alex)
-            </button>
-            <button
-              onClick={() => handleSwitchDemoRole('moderator')}
-              disabled={switchingRole || currentRole === 'moderator'}
-              className={`px-3 py-1 rounded-md font-semibold transition-colors border ${currentRole === 'moderator'
-                ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 border-transparent shadow-xs'
-                : 'bg-[var(--bg-card)] text-[var(--text-primary)] border-[var(--border-subtle)] hover:border-[var(--border-strong)]'
-                }`}
-            >
-              Moderator (Desk)
-            </button>
-            <button
-              onClick={() => handleSwitchDemoRole('admin')}
-              disabled={switchingRole || currentRole === 'admin'}
-              className={`px-3 py-1 rounded-md font-semibold transition-colors border ${currentRole === 'admin'
-                ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 border-transparent shadow-xs'
-                : 'bg-[var(--bg-card)] text-[var(--text-primary)] border-[var(--border-subtle)] hover:border-[var(--border-strong)]'
-                }`}
-            >
-              Admin (Campus Admin)
-            </button>
+          <div className="w-full sm:w-auto space-y-1.5 sm:space-y-0 sm:flex sm:items-center sm:gap-2 text-xs">
+            <span className="text-[11px] font-mono text-[var(--text-muted)] block sm:inline">Switch Role:</span>
+            <div className="grid grid-cols-3 gap-1.5 sm:flex sm:items-center">
+              <button
+                onClick={() => handleSwitchDemoRole('member')}
+                disabled={switchingRole || currentRole === 'member'}
+                className={`py-1.5 px-2 rounded-lg font-semibold text-xs text-center transition-colors border ${currentRole === 'member'
+                  ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 border-transparent shadow-xs'
+                  : 'bg-[var(--bg-card)] text-[var(--text-primary)] border-[var(--border-subtle)] hover:border-[var(--border-strong)]'
+                  }`}
+              >
+                Member
+              </button>
+              <button
+                onClick={() => handleSwitchDemoRole('moderator')}
+                disabled={switchingRole || currentRole === 'moderator'}
+                className={`py-1.5 px-2 rounded-lg font-semibold text-xs text-center transition-colors border ${currentRole === 'moderator'
+                  ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 border-transparent shadow-xs'
+                  : 'bg-[var(--bg-card)] text-[var(--text-primary)] border-[var(--border-subtle)] hover:border-[var(--border-strong)]'
+                  }`}
+              >
+                Moderator
+              </button>
+              <button
+                onClick={() => handleSwitchDemoRole('admin')}
+                disabled={switchingRole || currentRole === 'admin'}
+                className={`py-1.5 px-2 rounded-lg font-semibold text-xs text-center transition-colors border ${currentRole === 'admin'
+                  ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 border-transparent shadow-xs'
+                  : 'bg-[var(--bg-card)] text-[var(--text-primary)] border-[var(--border-subtle)] hover:border-[var(--border-strong)]'
+                  }`}
+              >
+                Admin
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -815,7 +817,7 @@ export default function OrgHomePage() {
       )}
 
       {/* Workspace Header Overview Card */}
-      <div className="border border-[var(--border-subtle)] bg-[var(--bg-card)] rounded-xl p-6 sm:p-7 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-5">
+      <div className="border border-[var(--border-subtle)] bg-[var(--bg-card)] rounded-xl p-4 sm:p-7 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             <span className="px-2.5 py-0.5 rounded text-[10px] font-mono font-medium border border-[var(--border-subtle)] bg-[var(--bg-subtle)] text-[var(--text-secondary)] uppercase">
@@ -833,7 +835,7 @@ export default function OrgHomePage() {
             </span>
           </div>
 
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-[var(--text-primary)] tracking-tight">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-[var(--text-primary)] tracking-tight break-words">
             {org.name}
           </h1>
 
@@ -844,19 +846,19 @@ export default function OrgHomePage() {
         </div>
 
         {/* Header Actions: Access Code, Staff Requests, & AI Operations Digest */}
-        <div className="flex flex-wrap items-center gap-2.5 self-start md:self-auto">
+        <div className="flex flex-wrap items-center gap-2 self-start md:self-auto">
           {currentRole === 'admin' && (
             <button
               type="button"
               onClick={handleOpenSettingsTab}
-              className={`p-3 sm:px-3.5 sm:py-3 rounded-xl border text-xs font-semibold flex items-center gap-2 transition-all shadow-xs ${activeTab === 'settings'
+              className={`px-3 py-2 sm:px-3.5 sm:py-2.5 rounded-xl border text-xs font-semibold flex items-center gap-2 transition-all shadow-xs ${activeTab === 'settings'
                   ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 border-neutral-900 dark:border-white'
                   : 'border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:border-red-500/50 hover:bg-red-500/10 text-[var(--text-primary)]'
                 }`}
               title="Workspace Settings (Places, Items, Emails)"
             >
               <Settings className="w-4 h-4 text-red-500 shrink-0" />
-              <span className="hidden sm:inline">Workspace Settings</span>
+              <span>Settings</span>
             </button>
           )}
 
@@ -864,11 +866,11 @@ export default function OrgHomePage() {
             <button
               type="button"
               onClick={() => setShowStaffModal(true)}
-              className="p-3 sm:px-3.5 sm:py-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:border-amber-500/50 hover:bg-amber-500/10 text-xs font-semibold text-[var(--text-primary)] flex items-center gap-2 transition-all shadow-xs relative"
+              className="px-3 py-2 sm:px-3.5 sm:py-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:border-amber-500/50 hover:bg-amber-500/10 text-xs font-semibold text-[var(--text-primary)] flex items-center gap-2 transition-all shadow-xs relative"
               title="Review Moderator Requests"
             >
               <Users className="w-4 h-4 text-amber-500 shrink-0" />
-              <span className="hidden sm:inline">Staff Requests</span>
+              <span>Staff</span>
               {pendingModRequests.length > 0 && (
                 <span className="px-1.5 py-0.2 rounded-full bg-amber-500 text-black text-[10px] font-mono font-black ml-1">
                   {pendingModRequests.length}
@@ -883,12 +885,12 @@ export default function OrgHomePage() {
               setDigestSubTab('trends');
               setShowDigestModal(true);
             }}
-            className="p-3 sm:px-3.5 sm:py-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:border-emerald-500/50 hover:bg-emerald-500/10 text-xs font-semibold text-[var(--text-primary)] flex items-center gap-2 transition-all shadow-xs"
+            className="px-3 py-2 sm:px-3.5 sm:py-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:border-emerald-500/50 hover:bg-emerald-500/10 text-xs font-semibold text-[var(--text-primary)] flex items-center gap-2 transition-all shadow-xs"
             title={isPrivileged ? 'View AI Operations & Trends Digest' : 'View Lost & Found Activity Trends'}
           >
             {isPrivileged ? <Sparkles className="w-4 h-4 text-emerald-500 shrink-0" /> : <TrendingUp className="w-4 h-4 text-emerald-500 shrink-0" />}
-            <span className="hidden sm:inline">
-              {isPrivileged ? 'AI Operations Digest' : 'Activity & Trends'}
+            <span>
+              {isPrivileged ? 'AI Digest' : 'Activity & Trends'}
             </span>
           </button>
 
@@ -1136,24 +1138,24 @@ export default function OrgHomePage() {
       )}
 
       {/* Primary Action Buttons */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         {/* I Found Something Card */}
         <Link
           to={`/o/${slug}/report/found`}
-          className="p-6 rounded-xl bg-red-600 hover:bg-red-700 text-white transition-all shadow-sm hover:shadow flex items-center justify-between group"
+          className="p-4 sm:p-6 rounded-xl bg-red-600 hover:bg-red-700 text-white transition-all shadow-sm hover:shadow flex items-center justify-between group"
         >
           <div className="space-y-1">
             <div className="text-[10px] font-mono uppercase tracking-wider text-white/80">
               Quick 45s Report
             </div>
-            <div className="text-xl font-extrabold text-white tracking-tight">
+            <div className="text-lg sm:text-xl font-extrabold text-white tracking-tight">
               I Found Something
             </div>
             <div className="text-xs text-white/90">
               Upload photo, choose location, and log found item.
             </div>
           </div>
-          <div className="w-10 h-10 rounded-lg bg-white/20 text-white flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-white/20 text-white flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
             <Plus className="w-5 h-5 stroke-[2.5]" />
           </div>
         </Link>
@@ -1161,20 +1163,20 @@ export default function OrgHomePage() {
         {/* I Lost Something Card */}
         <Link
           to={`/o/${slug}/report/lost`}
-          className="border border-[var(--border-subtle)] bg-[var(--bg-card)] hover:border-red-500/50 hover:bg-[var(--bg-subtle)] rounded-xl p-6 flex items-center justify-between shadow-sm transition-all group"
+          className="border border-[var(--border-subtle)] bg-[var(--bg-card)] hover:border-red-500/50 hover:bg-[var(--bg-subtle)] rounded-xl p-4 sm:p-6 flex items-center justify-between shadow-sm transition-all group"
         >
           <div className="space-y-1">
             <div className="text-[10px] font-mono uppercase tracking-wider text-[var(--text-muted)] group-hover:text-red-500 transition-colors">
               Sentence-First · Under 60s
             </div>
-            <div className="text-xl font-bold text-[var(--text-primary)] tracking-tight">
+            <div className="text-lg sm:text-xl font-bold text-[var(--text-primary)] tracking-tight">
               I Lost Something
             </div>
             <div className="text-xs text-[var(--text-secondary)]">
               Describe your item to match against verified custody records.
             </div>
           </div>
-          <div className="w-10 h-10 rounded-lg bg-[var(--bg-subtle)] group-hover:bg-red-500/10 group-hover:text-red-500 text-[var(--text-primary)] flex items-center justify-center flex-shrink-0 transition-colors">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-[var(--bg-subtle)] group-hover:bg-red-500/10 group-hover:text-red-500 text-[var(--text-primary)] flex items-center justify-center flex-shrink-0 transition-colors">
             <Search className="w-5 h-5" />
           </div>
         </Link>
@@ -1182,10 +1184,10 @@ export default function OrgHomePage() {
 
       {/* Category Filter Chips */}
       {org.categories?.length > 0 && (
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs no-scrollbar -mx-3.5 px-3.5 sm:mx-0 sm:px-0">
           <button
             onClick={() => setSelectedCategory(null)}
-            className={`px-3 py-1 rounded-md font-medium transition-colors whitespace-nowrap border ${selectedCategory === null
+            className={`px-3 py-1 rounded-md font-medium transition-colors whitespace-nowrap border shrink-0 ${selectedCategory === null
               ? 'bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 border-neutral-900 dark:border-neutral-100'
               : 'bg-[var(--bg-card)] text-[var(--text-secondary)] border-[var(--border-subtle)] hover:border-[var(--border-strong)]'
               }`}
@@ -1196,7 +1198,7 @@ export default function OrgHomePage() {
             <button
               key={cat.key}
               onClick={() => setSelectedCategory(selectedCategory === cat.key ? null : cat.key)}
-              className={`px-3 py-1 rounded-md font-medium transition-colors whitespace-nowrap border ${selectedCategory === cat.key
+              className={`px-3 py-1 rounded-md font-medium transition-colors whitespace-nowrap border shrink-0 ${selectedCategory === cat.key
                 ? 'bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 border-neutral-900 dark:border-neutral-100'
                 : 'bg-[var(--bg-card)] text-[var(--text-secondary)] border-[var(--border-subtle)] hover:border-[var(--border-strong)]'
                 }`}
@@ -1208,7 +1210,7 @@ export default function OrgHomePage() {
       )}
 
       {/* Tabs */}
-      <div className="border-b border-[var(--border-subtle)] flex items-center justify-between text-xs font-semibold overflow-x-auto">
+      <div className="border-b border-[var(--border-subtle)] flex items-center justify-between text-xs font-semibold overflow-x-auto no-scrollbar gap-4 -mx-3.5 px-3.5 sm:mx-0 sm:px-0">
         <div className="flex gap-4 sm:gap-6 min-w-max">
           <button
             onClick={() => setActiveTab('feed')}

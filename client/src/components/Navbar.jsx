@@ -138,53 +138,54 @@ export default function Navbar() {
   const isLanding = currentPath === '/';
 
   return (
-    <header className="sticky top-2 sm:top-5 z-50 px-3 sm:px-6 lg:px-8 pointer-events-none transition-all duration-500">
-      <div
-        className={`mx-auto pointer-events-auto rounded-full bg-black/90 dark:bg-black/95 text-white border border-neutral-800/80 shadow-[0_12px_40px_rgba(0,0,0,0.6)] backdrop-blur-xl flex items-center justify-between transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${
-          isLanding
-            ? 'max-w-xl sm:max-w-2xl lg:max-w-3xl h-11 sm:h-14 px-3.5 sm:px-5 gap-2.5 sm:gap-4'
-            : 'max-w-[90rem] h-12 sm:h-16 px-3.5 sm:px-6 lg:px-7 gap-3 sm:gap-5 lg:gap-8'
-        }`}
-      >
-        {/* Left: Brand & Workspace Selector */}
-        <div className="flex min-w-0 items-center gap-2.5 sm:gap-3 flex-shrink-0">
-          <Link to="/" className="flex items-center gap-2 group flex-shrink-0">
-            <div
-              className={`rounded-xl bg-neutral-900 border border-neutral-700/80 shadow-inner flex items-center justify-center text-white group-hover:scale-105 transition-all ${
-                isLanding ? 'w-7 h-7 sm:w-8 sm:h-8' : 'w-8 h-8'
-              }`}
-            >
-              <Shield
-                className={`fill-white text-white transition-all ${
-                  isLanding ? 'w-3.5 h-3.5 sm:w-4 sm:h-4' : 'w-4 h-4'
+    <>
+      <header className="sticky top-0 sm:top-5 z-50 px-0 sm:px-6 lg:px-8 pointer-events-none transition-all duration-300 w-full max-w-full">
+        <div
+          className={`mx-auto pointer-events-auto rounded-none sm:rounded-full bg-black/95 text-white border-b border-neutral-800 sm:border sm:border-neutral-800/80 shadow-md sm:shadow-[0_12px_40px_rgba(0,0,0,0.6)] backdrop-blur-xl flex items-center justify-between transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] w-full ${
+            isLanding
+              ? 'max-w-xl sm:max-w-2xl lg:max-w-3xl h-14 sm:h-14 px-3.5 sm:px-5 gap-2 sm:gap-4'
+              : 'max-w-[90rem] h-14 sm:h-16 px-3.5 sm:px-6 lg:px-7 gap-2 sm:gap-5 lg:gap-8'
+          }`}
+        >
+          {/* Left: Brand & Workspace Selector */}
+          <div className="flex min-w-0 items-center gap-1.5 sm:gap-3 flex-shrink-0">
+            <Link to="/" className="flex items-center gap-1.5 sm:gap-2 group flex-shrink-0">
+              <div
+                className={`rounded-xl bg-neutral-900 border border-neutral-700/80 shadow-inner flex items-center justify-center text-white group-hover:scale-105 transition-all ${
+                  isLanding ? 'w-6 h-6 sm:w-8 sm:h-8' : 'w-7 h-7 sm:w-8 sm:h-8'
                 }`}
-              />
-            </div>
-            <span
-              className={`font-extrabold tracking-tight text-white transition-all ${
-                isLanding ? 'text-sm sm:text-base' : 'text-base'
-              }`}
-            >
-              Haven
-            </span>
-          </Link>
-
-          {/* Workspace Selector Pill (shown when inside a workspace or subpage) */}
-          {!isLanding && user && (activeMembership || activeSlug) && (
-            <div className="relative animate-in fade-in zoom-in-95 duration-300" ref={dropdownRef}>
-              <button
-                onClick={() => setOrgDropdownOpen((p) => !p)}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-xs font-medium text-neutral-300 transition-colors"
               >
-                <Building2 className="w-3.5 h-3.5 text-neutral-400 flex-shrink-0" />
-                <span className="truncate max-w-[90px] sm:max-w-[130px] font-semibold text-white">
-                  {displayedOrgName}
-                </span>
-                <ChevronDown className="w-3 h-3 text-neutral-400 flex-shrink-0" />
-              </button>
+                <Shield
+                  className={`fill-white text-white transition-all ${
+                    isLanding ? 'w-3 h-3 sm:w-4 sm:h-4' : 'w-3.5 h-3.5 sm:w-4 sm:h-4'
+                  }`}
+                />
+              </div>
+              <span
+                className={`${
+                  !isLanding ? 'hidden sm:inline' : 'inline'
+                } font-extrabold tracking-tight text-white transition-all text-xs sm:text-base`}
+              >
+                Haven
+              </span>
+            </Link>
+
+            {/* Workspace Selector Pill (shown when inside a workspace or subpage) */}
+            {!isLanding && user && (activeMembership || activeSlug) && (
+              <div className="relative animate-in fade-in zoom-in-95 duration-300" ref={dropdownRef}>
+                <button
+                  onClick={() => setOrgDropdownOpen((p) => !p)}
+                  className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 rounded-full bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-[11px] sm:text-xs font-medium text-neutral-300 transition-colors"
+                >
+                  <Building2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-neutral-400 flex-shrink-0" />
+                  <span className="truncate max-w-[85px] sm:max-w-[130px] font-semibold text-white">
+                    {displayedOrgName}
+                  </span>
+                  <ChevronDown className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-neutral-400 flex-shrink-0" />
+                </button>
 
               {orgDropdownOpen && (
-                <div className="absolute left-0 mt-2.5 w-64 bg-[#111111] border border-[#262626] rounded-2xl shadow-2xl py-2 z-50 backdrop-blur-md">
+                <div className="fixed top-14 left-3 right-3 sm:left-0 sm:right-auto sm:absolute sm:top-full sm:mt-2.5 sm:w-64 max-w-xs bg-[#111111] border border-[#262626] rounded-2xl shadow-2xl py-2 z-50 backdrop-blur-xl">
                   <div className="px-3.5 py-1.5 border-b border-[#222222] flex items-center justify-between text-[10px] font-mono uppercase text-neutral-400">
                     <span>Workspaces</span>
                     <span>{memberships.length}</span>
@@ -343,12 +344,12 @@ export default function Navbar() {
         </nav>
 
         {/* Right: Consolidated Action & Controls */}
-        <div className="flex items-center gap-2 sm:gap-2.5 flex-shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-2.5 flex-shrink-0">
           {activeSlug && !isLanding ? (
-            <div className="relative animate-in fade-in zoom-in-95 duration-300" ref={reportDropdownRef}>
+            <div className="hidden sm:block relative animate-in fade-in zoom-in-95 duration-300" ref={reportDropdownRef}>
               <button
                 onClick={() => setReportDropdownOpen((p) => !p)}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white hover:bg-neutral-200 text-black text-xs font-bold transition-all shadow-md whitespace-nowrap"
+                className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-full bg-white hover:bg-neutral-200 text-black text-[11px] sm:text-xs font-bold transition-all shadow-md whitespace-nowrap"
               >
                 <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
                 <span>Report</span>
@@ -356,7 +357,7 @@ export default function Navbar() {
               </button>
 
               {reportDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-52 bg-[#111111] border border-[#262626] rounded-2xl shadow-2xl p-1.5 z-50 backdrop-blur-md">
+                <div className="absolute right-0 mt-2 w-52 max-w-[calc(100vw-2rem)] bg-[#111111] border border-[#262626] rounded-2xl shadow-2xl p-1.5 z-50 backdrop-blur-md">
                   <Link
                     to={`/o/${activeSlug}/report/lost`}
                     onClick={() => setReportDropdownOpen(false)}
@@ -390,12 +391,12 @@ export default function Navbar() {
           ) : (
             <Link
               to={user ? '/orgs/new' : '/login?redirect=/orgs/new'}
-              className={`flex items-center gap-1.5 rounded-full bg-white hover:bg-neutral-200 text-black font-bold transition-all shadow-md whitespace-nowrap ${
-                isLanding ? 'px-3 sm:px-3.5 py-1 sm:py-1.5 text-xs' : 'px-3 sm:px-4 py-1.5 text-xs'
+              className={`flex items-center gap-1 sm:gap-1.5 rounded-full bg-white hover:bg-neutral-200 text-black font-bold transition-all shadow-md whitespace-nowrap ${
+                isLanding ? 'px-2.5 sm:px-3.5 py-1 sm:py-1.5 text-[11px] sm:text-xs' : 'px-2.5 sm:px-4 py-1.5 text-xs'
               }`}
             >
               <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-              <span>Create Workspace</span>
+              <span>Create<span className="hidden sm:inline"> Workspace</span></span>
             </Link>
           )}
 
@@ -404,7 +405,7 @@ export default function Navbar() {
             <div className="relative animate-in fade-in zoom-in-95 duration-300" ref={notifDropdownRef}>
               <button
                 onClick={() => setNotifDropdownOpen((p) => !p)}
-                className="w-8 h-8 rounded-full bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300 hover:text-white flex items-center justify-center transition-colors relative"
+                className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300 hover:text-white flex items-center justify-center transition-colors relative"
                 title="Notifications & Custody Alerts"
                 aria-label="Notifications"
               >
@@ -417,7 +418,7 @@ export default function Navbar() {
               </button>
 
               {notifDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-[#111111] border border-[#262626] rounded-2xl shadow-2xl p-3 z-50 backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150">
+                <div className="fixed top-14 left-3 right-3 sm:left-auto sm:right-0 sm:absolute sm:top-full sm:mt-2 sm:w-96 max-w-sm bg-[#111111] border border-[#262626] rounded-2xl shadow-2xl p-3 z-50 backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150">
                   <div className="flex items-center justify-between pb-2.5 mb-2 border-b border-[#262626]">
                     <div className="flex items-center gap-2">
                       <Bell className="w-4 h-4 text-red-500" />
@@ -520,7 +521,7 @@ export default function Navbar() {
           <button
             onClick={toggleTheme}
             className={`rounded-full bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300 hover:text-white flex items-center justify-center transition-all ${
-              isLanding ? 'w-7 h-7 sm:w-8 sm:h-8' : 'w-8 h-8'
+              isLanding ? 'w-7 h-7 sm:w-8 sm:h-8' : 'w-7 h-7 sm:w-8 sm:h-8'
             }`}
             title={isDark ? 'Switch to Light mode' : 'Switch to Dark mode'}
             aria-label="Toggle theme"
@@ -534,11 +535,11 @@ export default function Navbar() {
 
           {/* User Account / Profile */}
           {user ? (
-            <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+            <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
               <Link
                 to="/profile"
-                className={`flex max-w-[172px] items-center gap-2 pl-1.5 pr-2.5 rounded-full bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-xs text-white transition-all group ${
-                  isLanding ? 'py-1' : 'py-1.5'
+                className={`flex items-center gap-1.5 sm:gap-2 pl-1 sm:pl-1.5 pr-1.5 sm:pr-2.5 rounded-full bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-xs text-white transition-all group ${
+                  isLanding ? 'py-1' : 'py-1 sm:py-1.5'
                 }`}
                 title="Account Dashboard & Roles"
               >
@@ -571,7 +572,7 @@ export default function Navbar() {
             <Link
               to="/login"
               className={`font-medium text-neutral-300 hover:text-white transition-colors ${
-                isLanding ? 'px-2.5 py-1 text-xs' : 'px-3 py-1.5 text-xs'
+                isLanding ? 'px-2 py-1 text-xs' : 'px-2.5 py-1 text-xs'
               }`}
             >
               Sign In
@@ -581,5 +582,59 @@ export default function Navbar() {
         </div>
       </div>
     </header>
+
+    {/* Mobile Bottom Navigation Bar (Workspace View) */}
+    {activeSlug && !isLanding && (
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-black/95 border-t border-neutral-800/80 backdrop-blur-xl px-2 pt-1.5 pb-[max(0.6rem,env(safe-area-inset-bottom))] flex items-center justify-around text-[10px] font-medium text-white shadow-2xl">
+        <Link
+          to={`/o/${activeSlug}`}
+          className={`flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg transition-colors ${
+            currentPath === `/o/${activeSlug}` ? 'text-red-500 font-bold' : 'text-neutral-400 hover:text-white'
+          }`}
+        >
+          <Building2 className="w-4 h-4" />
+          <span>Home</span>
+        </Link>
+        <Link
+          to={`/o/${activeSlug}/feed`}
+          className={`flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg transition-colors ${
+            currentPath.includes('/feed') ? 'text-red-500 font-bold' : 'text-neutral-400 hover:text-white'
+          }`}
+        >
+          <Search className="w-4 h-4" />
+          <span>Feed</span>
+        </Link>
+        <Link
+          to={`/o/${activeSlug}/report/found`}
+          className="flex flex-col items-center gap-0.5 px-2 py-0.5 text-white transition-transform active:scale-95"
+        >
+          <div className="w-8 h-8 rounded-full bg-red-600 text-white flex items-center justify-center shadow-md shadow-red-950/40">
+            <Plus className="w-4 h-4 stroke-[3]" />
+          </div>
+          <span className="text-[9px] font-bold text-red-500">Report</span>
+        </Link>
+        <Link
+          to={`/o/${activeSlug}/activity`}
+          className={`flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg transition-colors ${
+            currentPath.includes('/activity') ? 'text-red-500 font-bold' : 'text-neutral-400 hover:text-white'
+          }`}
+        >
+          <Clock className="w-4 h-4" />
+          <span>Activity</span>
+        </Link>
+        {['admin', 'moderator'].includes(currentWorkspaceRole) && (
+          <Link
+            to={`/o/${activeSlug}/moderation`}
+            className={`flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg transition-colors ${
+              currentPath.includes('/moderation') ? 'text-red-500 font-bold' : 'text-neutral-400 hover:text-white'
+            }`}
+          >
+            <Shield className="w-4 h-4" />
+            <span>Desk</span>
+          </Link>
+        )}
+      </nav>
+    )}
+  </>
   );
 }

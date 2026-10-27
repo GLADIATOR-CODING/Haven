@@ -236,7 +236,7 @@ export default function ModeratorWorkspacePage({ initialTab = null }) {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-10 py-8 sm:py-12 space-y-8">
+    <div className="max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 py-4 sm:py-10 space-y-4 sm:space-y-8 w-full max-w-full overflow-hidden">
       {actionError && (
         <div role="alert" className="flex items-center justify-between gap-3 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs font-medium text-red-700 shadow-sm dark:text-red-300">
           <span className="flex items-center gap-2"><AlertCircle className="h-4 w-4 shrink-0" />{actionError}</span>
@@ -282,42 +282,44 @@ export default function ModeratorWorkspacePage({ initialTab = null }) {
       </div>
 
       {/* Primary Navigation Tabs */}
-      <div className="flex items-center gap-2 border-b border-[var(--border-subtle)] pb-2 text-xs font-semibold">
-        <button
-          onClick={() => handleTabChange('claims')}
-          className={`px-4 py-2 rounded-xl font-mono transition-all flex items-center gap-2 ${
-            activeTab === 'claims'
-              ? 'bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 font-bold shadow-xs'
-              : 'bg-[var(--bg-card)] hover:bg-[var(--bg-subtle)] text-[var(--text-secondary)] border border-[var(--border-subtle)]'
-          }`}
-        >
-          <KeyRound className="w-4 h-4" />
-          <span>Claims Review Queue ({pendingClaims.length})</span>
-        </button>
+      <div className="border-b border-[var(--border-subtle)] pb-2 overflow-x-auto min-w-0 max-w-full">
+        <div className="flex items-center gap-2 text-xs font-semibold min-w-max">
+          <button
+            onClick={() => handleTabChange('claims')}
+            className={`px-3.5 sm:px-4 py-2 rounded-xl font-mono transition-all flex items-center gap-2 ${
+              activeTab === 'claims'
+                ? 'bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 font-bold shadow-xs'
+                : 'bg-[var(--bg-card)] hover:bg-[var(--bg-subtle)] text-[var(--text-secondary)] border border-[var(--border-subtle)]'
+            }`}
+          >
+            <KeyRound className="w-4 h-4" />
+            <span>Claims Review Queue ({pendingClaims.length})</span>
+          </button>
 
-        <button
-          onClick={() => handleTabChange('reports')}
-          className={`px-4 py-2 rounded-xl font-mono transition-all flex items-center gap-2 ${
-            activeTab === 'reports'
-              ? 'bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 font-bold shadow-xs'
-              : 'bg-[var(--bg-card)] hover:bg-[var(--bg-subtle)] text-[var(--text-secondary)] border border-[var(--border-subtle)]'
-          }`}
-        >
-          <Lock className="w-4 h-4" />
-          <span>Pending Intake ({pendingReports.length})</span>
-        </button>
+          <button
+            onClick={() => handleTabChange('reports')}
+            className={`px-3.5 sm:px-4 py-2 rounded-xl font-mono transition-all flex items-center gap-2 ${
+              activeTab === 'reports'
+                ? 'bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 font-bold shadow-xs'
+                : 'bg-[var(--bg-card)] hover:bg-[var(--bg-subtle)] text-[var(--text-secondary)] border border-[var(--border-subtle)]'
+            }`}
+          >
+            <Lock className="w-4 h-4" />
+            <span>Pending Intake ({pendingReports.length})</span>
+          </button>
 
-        <button
-          onClick={() => handleTabChange('handover')}
-          className={`px-4 py-2 rounded-xl font-mono transition-all flex items-center gap-2 ${
-            activeTab === 'handover'
-              ? 'bg-red-600 text-white font-bold shadow-xs'
-              : 'bg-[var(--bg-card)] hover:bg-[var(--bg-subtle)] text-[var(--text-secondary)] border border-[var(--border-subtle)]'
-          }`}
-        >
-          <CheckCircle2 className="w-4 h-4" />
-          <span>Handover Desk Terminal</span>
-        </button>
+          <button
+            onClick={() => handleTabChange('handover')}
+            className={`px-3.5 sm:px-4 py-2 rounded-xl font-mono transition-all flex items-center gap-2 ${
+              activeTab === 'handover'
+                ? 'bg-red-600 text-white font-bold shadow-xs'
+                : 'bg-[var(--bg-card)] hover:bg-[var(--bg-subtle)] text-[var(--text-secondary)] border border-[var(--border-subtle)]'
+            }`}
+          >
+            <CheckCircle2 className="w-4 h-4" />
+            <span>Handover Desk Terminal</span>
+          </button>
+        </div>
       </div>
 
       {/* ───────────────────────────────────────────────────────────── */}

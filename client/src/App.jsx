@@ -26,6 +26,7 @@ import {
   Search,
   CheckCircle2,
   Building2,
+  Coffee,
 } from 'lucide-react';
 import {
   AsciiGhostMascot,
@@ -85,7 +86,7 @@ function LandingPage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-5 sm:px-8 py-12 sm:py-20 space-y-14">
+    <div className="max-w-6xl mx-auto px-3.5 sm:px-8 py-8 sm:py-20 space-y-10 sm:space-y-14 w-full max-w-full overflow-hidden">
       {/* Hero Section */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
         <div className="lg:col-span-7 space-y-4">
@@ -423,12 +424,21 @@ function LandingPage() {
 
       {/* Footer */}
       <div className="pt-6 border-t border-[var(--border-subtle)] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[var(--text-muted)]">
-        <div>
+        <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
           <span>Haven Platform</span>
-          <span className="mx-2">·</span>
-          <span>Physical custody and lost asset recovery</span>
+          <span className="hidden sm:inline">·</span>
+          <span className="text-center sm:text-left">Physical custody and lost asset recovery</span>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center justify-center gap-4">
+          <a
+            href="https://buymeacoffee.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] border border-[var(--border-subtle)] text-[11px] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+          >
+            <Coffee className="w-3.5 h-3.5 text-amber-500" />
+            <span>Buy me a coffee</span>
+          </a>
           <button
             onClick={() => setLegalDoc('privacy')}
             className="hover:text-[var(--text-primary)] transition-colors underline-offset-2 hover:underline"
@@ -457,7 +467,7 @@ export default function App() {
 
   return (
     <AuthProvider>
-      <div className="min-h-screen bg-[var(--bg-page)] flex flex-col text-[var(--text-primary)] transition-colors duration-150">
+      <div className="min-h-screen bg-[var(--bg-page)] flex flex-col text-[var(--text-primary)] transition-colors duration-150 w-full max-w-full overflow-x-hidden">
         {healthLoading && (
           <div className="bg-neutral-900 text-white px-4 py-1.5 text-xs text-center flex items-center justify-center gap-2">
             <Clock className="w-3 h-3 text-neutral-300 animate-spin" />
@@ -474,7 +484,7 @@ export default function App() {
 
         <Navbar />
 
-        <main className="flex-1 pt-3 sm:pt-5">
+        <main className="flex-1 pt-0 sm:pt-5 w-full max-w-full overflow-x-hidden pb-24 md:pb-6">
           <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />

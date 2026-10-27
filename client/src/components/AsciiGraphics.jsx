@@ -128,8 +128,8 @@ export function AsciiGhostMascot({ hero = false, compact = false }) {
         </div>
 
         {/* High-Contrast Obsidian Screen */}
-        <div className="my-4 py-4 px-2 flex flex-col items-center justify-center bg-[#050505] rounded-xl border border-[#1a1a1a]">
-          <pre className="font-mono text-xs sm:text-sm leading-tight text-neutral-100 transition-all duration-150 text-center font-bold tracking-tight">
+        <div className="my-4 py-4 px-2 flex flex-col items-center justify-center bg-[#050505] rounded-xl border border-[#1a1a1a] w-full max-w-full overflow-hidden">
+          <pre className="font-mono text-[10px] xs:text-xs sm:text-sm leading-tight text-neutral-100 transition-all duration-150 text-center font-bold tracking-tight overflow-x-auto max-w-full">
             {active.art.join('\n')}
           </pre>
         </div>
@@ -163,8 +163,8 @@ export function AsciiGhostMascot({ hero = false, compact = false }) {
       </div>
 
       {/* Guaranteed High-Contrast Terminal Canvas */}
-      <div className="py-2.5 flex flex-col items-center justify-center bg-[#050505] rounded-lg border border-[#1a1a1a]">
-        <pre className="font-mono text-xs leading-tight text-neutral-100 transition-all duration-150 text-center font-bold">
+      <div className="py-2.5 flex flex-col items-center justify-center bg-[#050505] rounded-lg border border-[#1a1a1a] w-full max-w-full overflow-hidden">
+        <pre className="font-mono text-[10px] xs:text-xs leading-tight text-neutral-100 transition-all duration-150 text-center font-bold overflow-x-auto max-w-full">
           {active.art.join('\n')}
         </pre>
       </div>
@@ -288,8 +288,8 @@ export function AsciiLostScanner() {
       </div>
 
       {/* Guaranteed High-Contrast Terminal Screen */}
-      <div className="flex-1 py-1.5 px-1 flex flex-col items-center justify-center bg-[#050505] rounded-lg border border-[#1a1a1a]">
-        <pre className="font-mono text-[9.5px] sm:text-[10px] leading-tight text-neutral-100 transition-all duration-150 text-center font-bold">
+      <div className="flex-1 py-1.5 px-1 flex flex-col items-center justify-center bg-[#050505] rounded-lg border border-[#1a1a1a] w-full max-w-full overflow-hidden">
+        <pre className="font-mono text-[8px] xs:text-[9.5px] sm:text-[10px] leading-tight text-neutral-100 transition-all duration-150 text-center font-bold overflow-x-auto max-w-full">
           {current.lines.join('\n')}
         </pre>
       </div>

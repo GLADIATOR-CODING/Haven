@@ -179,7 +179,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-5 sm:px-8 py-8 sm:py-12 space-y-10">
+    <div className="max-w-5xl mx-auto px-3.5 sm:px-8 py-4 sm:py-12 space-y-6 sm:space-y-10 w-full max-w-full overflow-hidden">
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[var(--border-subtle)]">
         <div>
