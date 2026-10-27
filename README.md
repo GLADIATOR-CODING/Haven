@@ -10,11 +10,12 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/Architecture-Multi--Tenant%20SaaS-0052CC?style=for-the-badge&logo=cloud&logoColor=white" alt="Multi-Tenant SaaS" />
-  <img src="https://img.shields.io/badge/Frontend-React%2019%20%7C%20Vite-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React 19" />
+  <img src="https://img.shields.io/badge/Frontend-React%2018%20%7C%20Vite-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React 18" />
   <img src="https://img.shields.io/badge/Backend-Node.js%20%7C%20Express-339933?style=for-the-badge&logo=node.js&logoColor=white" alt="Node.js" />
   <img src="https://img.shields.io/badge/Database-MongoDB%20Mongoose-47A248?style=for-the-badge&logo=mongodb&logoColor=white" alt="MongoDB" />
   <img src="https://img.shields.io/badge/EXIF%20Leak-0%20Bytes%20(Dual--Layer)-10B981?style=for-the-badge&logo=shield&logoColor=white" alt="Zero EXIF Leak" />
   <img src="https://img.shields.io/badge/Intake%20Time-~22s%20(Under%2045s)-F59E0B?style=for-the-badge&logo=speedtest&logoColor=white" alt="Under 45s Intake" />
+  <a href="#-demo-video--walkthrough"><img src="https://img.shields.io/badge/Demo%20Video-Watch%20Now-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="Demo Video" /></a>
 </p>
 
 ---
@@ -22,6 +23,7 @@
 ## 📑 Table of Contents
 
 - [🌟 Why Haven?](#-why-haven)
+- [🎬 Demo Video & Walkthrough](#-demo-video--walkthrough)
 - [⚡ Quick Start for Evaluators (1-Click Demo Roles)](#-quick-start-for-evaluators)
 - [🔄 The Lifecycle of a Lost Item](#-the-lifecycle-of-a-lost-item)
 - [🏛️ Multi-Tenant SaaS Architecture](#️-multi-tenant-saas-architecture)
@@ -55,6 +57,29 @@ Physical spaces—universities, tech campuses, hostels, airports, and stadiums�
 | **Proof of Ownership** | ❌ Honor system / subjective | ⚠️ Visual inspection | 🔐 **HMAC-SHA256 Blind Challenge Proofs** |
 | **Audit Trail** | ❌ Chat logs get deleted | ⚠️ Paper can be lost | 📝 **Tamper-proof digital handover log** |
 | **Multi-Space Scoping** | ❌ Mixed in one big group | ❌ Islanded | 🏢 **Scoped sub-paths (`/o/slug`)** |
+
+---
+
+## 🎬 Demo Video & Walkthrough
+
+> 🎥 **See Haven in Action:** Watch a comprehensive walkthrough demonstrating Haven's sub-45s mobile found item intake, dual-layer zero-leak EXIF scrubbing, HMAC-SHA256 blind challenge ownership verification, physical desk handover OTP verification, and 1-click evaluator role switcher.
+
+<p align="center">
+  <a href="DEMO_VIDEO_URL_PLACEHOLDER" target="_blank" rel="noopener noreferrer">
+    <img src="https://img.shields.io/badge/▶%20Watch%20Demo%20Video-Loom%20%2F%20YouTube-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="Watch Demo Video" />
+  </a>
+</p>
+
+<!-- DEMO VIDEO LINK PLACEHOLDER -->
+<!-- Replace DEMO_VIDEO_URL_PLACEHOLDER below with your YouTube / Loom video link -->
+<div align="center">
+  <a href="DEMO_VIDEO_URL_PLACEHOLDER" target="_blank" rel="noopener noreferrer">
+    <img src="./assets/haven-banner.svg" alt="Haven Demo Video Walkthrough (Click to Watch)" width="100%" style="border-radius: 8px; border: 1px solid #334155; max-width: 800px;" />
+  </a>
+  <p>
+    📺 <b>Demo Video URL:</b> <a href="DEMO_VIDEO_URL_PLACEHOLDER"><code>DEMO_VIDEO_URL_PLACEHOLDER</code></a> <i>(Replace with hosted YouTube / Loom recording URL)</i>
+  </p>
+</div>
 
 ---
 
@@ -314,12 +339,15 @@ Haven satisfies the universality requirement through **data configuration, never
 
 ### Global Routes (`/api`)
 ```http
-POST   /api/auth/register             # Register new account
+GET    /api/health                    # Server health & timestamp check
+POST   /api/auth/signup               # Register new user account (also /register)
 POST   /api/auth/login                # Login and receive HTTP-only JWT
-POST   /api/auth/demo-login           # 1-Click evaluator authentication
+POST   /api/auth/demo-login           # 1-Click evaluator role authentication
+POST   /api/auth/logout               # Clear authentication session
 GET    /api/auth/me                   # Get current authenticated session
+PATCH  /api/auth/profile              # Update profile & upload avatar
 POST   /api/orgs                      # Create new workspace from template
-POST   /api/orgs/join                 # Join workspace via access code
+POST   /api/orgs/join                 # Join workspace via access code or slug
 
 GET    /api/notifications             # Fetch user notifications (with unread count)
 PATCH  /api/notifications/:id/read    # Mark single notification as read
@@ -330,7 +358,7 @@ POST   /api/notifications/mark-all-read # Mark all notifications as read
 ```http
 GET    /api/o/:slug                   # Fetch workspace configuration & user role
 PATCH  /api/o/:slug                   # [Admin] Update 6-sub-tab workspace settings
-POST   /api/o/:slug/join-code/rotate  # [Admin] Rotate access code with expiry presets
+POST   /api/o/:slug/invite/rotate     # [Admin] Rotate access code with expiry presets
 GET    /api/o/:slug/members           # [Admin] List workspace members & roles
 PATCH  /api/o/:slug/members/:id       # [Admin] Update member role
 DELETE /api/o/:slug/members/:id       # [Admin] Remove member from workspace
@@ -339,13 +367,20 @@ POST   /api/o/:slug/reports           # Submit found/lost item (multipart suppor
 GET    /api/o/:slug/reports/found     # Get published found items (category/zone filtered)
 GET    /api/o/:slug/reports/mine      # Get current user's submitted reports
 GET    /api/o/:slug/reports/:id       # Get single report detail (public serialized)
+GET    /api/o/:slug/reports/:id/matches # Get radar matches for a report
 POST   /api/o/:slug/reports/:id/review # [Mod] Approve/reject sensitive intake report
+PATCH  /api/o/:slug/reports/:id/status # Update report status (resolve or cancel)
 
-POST   /api/o/:slug/reports/:id/claim # Submit blind ownership claim (answers & contact)
+POST   /api/o/:slug/claims            # Submit blind ownership claim (answers & contact)
 GET    /api/o/:slug/claims            # [Mod] Desk claims queue with challenge diff
 GET    /api/o/:slug/claims/mine       # User's active and resolved claims
-POST   /api/o/:slug/claims/:id/review # [Mod] Approve, reject, or request info
-POST   /api/o/:slug/claims/:id/handover # [Mod] Verify 6-digit physical OTP & transfer custody
+GET    /api/o/:slug/claims/:id        # Get single claim details
+PATCH  /api/o/:slug/claims/:id/review # [Mod] Approve, reject, or request info
+POST   /api/o/:slug/claims/handover   # [Mod] Verify 6-digit physical OTP & transfer custody
+
+POST   /api/o/:slug/moderator-requests # Request promotion to moderator role
+GET    /api/o/:slug/moderator-requests # List moderator requests for workspace
+PATCH  /api/o/:slug/moderator-requests/:id # [Admin] Approve/deny mod request
 
 GET    /api/o/:slug/audit/logs        # [Staff] Paginated immutable custody audit trail
 GET    /api/o/:slug/audit/export      # [Staff] Download custody log as RFC 4180 CSV
@@ -373,7 +408,7 @@ Haven was engineered under an explicit **physical device timing budget**. Every 
 
 ## 🧪 Automated Testing & Quality Assurance
 
-Haven includes **6 core automated test suites** guaranteeing architectural boundaries, state machine guardrails, and cryptographic isolation:
+Haven includes **8 core automated test suites** guaranteeing architectural boundaries, state machine guardrails, and cryptographic isolation:
 
 ```bash
 cd server
@@ -382,12 +417,14 @@ npm test
 
 | Suite | File | Focus & Coverage | Assertions |
 | :--- | :--- | :--- | :--- |
-| **1. Scoring Engine** | `server/tests/scoring.test.js` | Time decay, zone/GPS Haversine proximity, Jaccard color/brand similarity, **missing-data weight renormalization**. | Signals sum to 1.0; 0 division errors. |
-| **2. State Machines** | `server/tests/stateMachines.test.js` | Legal & illegal transitions across Report (`pending_review`, `published`, `claim_pending`, `handed_over`) and Claim lifecycles. | Illegal transitions throw **409 Conflict**. |
-| **3. Tenant Isolation** | `server/tests/tenantIsolation.test.js` | Cross-tenant scoping; non-member access attempts; multi-org membership boundary verification. | Strict **404 Privacy by Obscurity**; zero 403 leaks. |
-| **4. Zero-Leak Defense** | `server/tests/privateLeak.test.js` | `publicView()` serializer defense; removal of `privateDetails`, secret hashes, and masking sensitive photos (IDs/wallets). | Private strings & hashes **never appear** in JSON payloads. |
-| **5. Claims Concurrency** | `server/tests/claims.test.js` | Simultaneous claim race condition; HMAC answer matching; **5-attempt lockout** with tamper-evident `AuditLog`. | First claim wins; second gets **409 Conflict**; lockout triggers on 5th failure. |
-| **6. AI Guardrails** | `server/tests/ai.test.js` | PII redaction (emails, phone numbers, URLs, cards); deterministic keyword fallback; stability with `aiEnabled: false`. | Zero PII sent to LLM; graceful fallback to keyword parsing. |
+| **1. Auth & Tenant Access** | `server/tests/authAndTenant.test.js` | Signup, login, JWT cookies, org creation, invite codes, and initial tenant isolation. | 200 OK health, valid JWT auth, role validation. |
+| **2. Report Domain & Privacy** | `server/tests/reportAndFound.test.js` | Found report creation, sensitive photo masking, public serialization, and desk drop-offs. | Sensitive photos masked; public serialization strictly sanitized. |
+| **3. Scoring Engine** | `server/tests/scoring.test.js` | Time decay, zone/GPS Haversine proximity, Jaccard color/brand similarity, **missing-data weight renormalization**. | Signals sum to 1.0; 0 division errors. |
+| **4. State Machines** | `server/tests/stateMachines.test.js` | Legal & illegal transitions across Report (`pending_review`, `published`, `claim_pending`, `handed_over`) and Claim lifecycles. | Illegal transitions throw **409 Conflict**. |
+| **5. Tenant Isolation** | `server/tests/tenantIsolation.test.js` | Cross-tenant scoping; non-member access attempts; multi-org membership boundary verification. | Strict **404 Privacy by Obscurity**; zero 403 leaks. |
+| **6. Zero-Leak Defense** | `server/tests/privateLeak.test.js` | `publicView()` serializer defense; removal of `privateDetails`, secret hashes, and masking sensitive photos (IDs/wallets). | Private strings & hashes **never appear** in JSON payloads. |
+| **7. Claims Concurrency** | `server/tests/claims.test.js` | Simultaneous claim race condition; HMAC answer matching; **5-attempt lockout** with tamper-evident `AuditLog`. | First claim wins; second gets **409 Conflict**; lockout triggers on 5th failure. |
+| **8. AI Guardrails** | `server/tests/ai.test.js` | PII redaction (emails, phone numbers, URLs, cards); deterministic keyword fallback; stability with `aiEnabled: false`. | Zero PII sent to LLM; graceful fallback to keyword parsing. |
 
 ---
 
@@ -435,6 +472,8 @@ npm install
 ```
 
 ### 2. Configure Environment Variables
+
+**Backend (`server/.env`):**
 Inside the `server/` directory, create a `.env` file:
 
 ```env
@@ -447,10 +486,19 @@ CLIENT_URL=http://localhost:5173
 CLOUDINARY_CLOUD_NAME=demo
 CLOUDINARY_API_KEY=demo
 CLOUDINARY_API_SECRET=demo
-AI_PROVIDER=none
+AI_PROVIDER=none                  # Options: 'gemini' | 'none'
+GEMINI_API_KEY=your_key_here     # Required only if AI_PROVIDER=gemini
+AI_TIMEOUT_MS=8000
 ```
 
 > 💡 **Tip:** Haven includes an **in-memory MongoDB fallback**. If no local MongoDB service is detected, it will spin up a transient in-memory database automatically for seamless evaluation!
+
+**Frontend (`client/.env` - Optional for local dev):**
+```env
+# Optional: In local dev, Vite automatically proxies /api to http://localhost:5000
+# In production, set to your hosted backend API URL:
+VITE_API_URL=
+```
 
 ### 3. Seed Demo Data
 Populate demo workspaces (`demo-campus`, `demo-office`) and test accounts:
