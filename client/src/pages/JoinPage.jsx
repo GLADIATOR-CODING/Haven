@@ -6,8 +6,15 @@ import { KeyRound, AlertCircle, AtSign, ShieldCheck, CheckCircle2, ArrowRight, B
 
 export default function JoinPage() {
   const { code: urlParam } = useParams();
-  const { user, selectOrgSlug, refetchMe } = useAuth();
+  const { user, isLoading, selectOrgSlug, refetchMe } = useAuth();
   const navigate = useNavigate();
+
+  React.useEffect(() => {
+    if (!isLoading && !user) {
+      const target = urlParam ? `/join/${urlParam}` : '/join';
+      navigate(`/login?redirect=${encodeURIComponent(target)}`, { replace: true });
+    }
+  }, [user, isLoading, urlParam, navigate]);
 
   // Mode: 'member' (domain-based) or 'admin' (8-digit code)
   const isCodeLikelyAdmin = urlParam && urlParam.length >= 6 && urlParam === urlParam.toUpperCase();
@@ -77,6 +84,17 @@ export default function JoinPage() {
       setLoading(false);
     }
   };
+
+  if (isLoading || !user) {
+    return (
+      <div className="min-h-[calc(100vh-8rem)] flex items-center justify-center">
+        <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)] font-mono">
+          <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
+          <span>Checking authorization...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-[calc(100vh-8rem)] flex items-center justify-center p-4 sm:p-6">

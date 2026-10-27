@@ -22,8 +22,6 @@ export default function LoginPage() {
       const res = await login({ email, password });
       if (redirectUrl) {
         navigate(redirectUrl);
-      } else if (res?.memberships?.length > 0) {
-        navigate(`/o/${res.memberships[0].orgSlug}`);
       } else {
         navigate('/');
       }
@@ -43,8 +41,6 @@ export default function LoginPage() {
       const res = await login({ email: demoEmail, password: 'Password123!' });
       if (redirectUrl) {
         navigate(redirectUrl);
-      } else if (res?.memberships?.length > 0) {
-        navigate(`/o/${res.memberships[0].orgSlug}`);
       } else {
         navigate('/');
       }
@@ -161,7 +157,10 @@ export default function LoginPage() {
 
         <div className="pt-2 text-center text-xs text-[var(--text-secondary)] border-t border-[var(--border-subtle)]">
           Don't have an account?{' '}
-          <Link to="/signup" className="font-semibold text-red-600 dark:text-red-400 hover:underline">
+          <Link
+            to={redirectUrl ? `/signup?redirect=${encodeURIComponent(redirectUrl)}` : '/signup'}
+            className="font-semibold text-red-600 dark:text-red-400 hover:underline"
+          >
             Create an account
           </Link>
         </div>

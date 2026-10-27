@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -193,6 +193,7 @@ export default function ClaimPage() {
   const { slug, id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
 
   const [answers, setAnswers] = useState({});
   const [selectedLostId, setSelectedLostId] = useState('');
@@ -326,6 +327,13 @@ export default function ClaimPage() {
       });
 
       setClaimResult(res);
+      await queryClient.invalidateQueries({ queryKey: ['deskClaims'] });
+      await queryClient.invalidateQueries({ queryKey: ['deskClaimsQueue'] });
+      await queryClient.invalidateQueries({ queryKey: ['myClaims'] });
+      await queryClient.invalidateQueries({ queryKey: ['foundFeed'] });
+      await queryClient.invalidateQueries({ queryKey: ['foundFeedFiltered'] });
+      await queryClient.invalidateQueries({ queryKey: ['claimReport', slug, id] });
+      await queryClient.invalidateQueries({ queryKey: ['notifications'] });
     } catch (err) {
       if (err.status === 409) {
         // Privacy-preserving error feedback: Never leak field details

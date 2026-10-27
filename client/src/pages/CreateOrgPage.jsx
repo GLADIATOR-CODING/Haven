@@ -57,8 +57,14 @@ const templates = [
 ];
 
 export default function CreateOrgPage() {
-  const { user, selectOrgSlug, refetchMe } = useAuth();
+  const { user, isLoading, selectOrgSlug, refetchMe } = useAuth();
   const navigate = useNavigate();
+
+  React.useEffect(() => {
+    if (!isLoading && !user) {
+      navigate('/login?redirect=/orgs/new', { replace: true });
+    }
+  }, [user, isLoading, navigate]);
 
   const [step, setStep] = useState(1);
   const [templateKey, setTemplateKey] = useState('campus');
@@ -143,6 +149,17 @@ export default function CreateOrgPage() {
       setTimeout(() => setCopied(false), 2000);
     }
   };
+
+  if (isLoading || !user) {
+    return (
+      <div className="min-h-[calc(100vh-8rem)] flex items-center justify-center">
+        <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)] font-mono">
+          <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
+          <span>Checking authorization...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8 sm:py-12">

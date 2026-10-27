@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Shield, User, Mail, Lock, AlertCircle } from 'lucide-react';
 
 export default function SignupPage() {
   const { signup } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirectUrl = searchParams.get('redirect');
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -19,7 +21,11 @@ export default function SignupPage() {
     setLoading(true);
     try {
       await signup({ name, email, password });
-      navigate('/orgs/new');
+      if (redirectUrl) {
+        navigate(redirectUrl);
+      } else {
+        navigate('/');
+      }
     } catch (err) {
       setError(err.message || 'Registration failed.');
     } finally {
@@ -113,7 +119,10 @@ export default function SignupPage() {
 
         <div className="pt-2 text-center text-xs text-[var(--text-secondary)] border-t border-[var(--border-subtle)]">
           Already have an account?{' '}
-          <Link to="/login" className="font-semibold text-red-600 dark:text-red-400 hover:underline">
+          <Link
+            to={redirectUrl ? `/login?redirect=${encodeURIComponent(redirectUrl)}` : '/login'}
+            className="font-semibold text-red-600 dark:text-red-400 hover:underline"
+          >
             Sign in
           </Link>
         </div>

@@ -87,7 +87,7 @@ export default function ModeratorWorkspacePage({ initialTab = null }) {
     queryKey: ['deskClaims', slug],
     queryFn: () => api.get(`/api/o/${slug}/claims`),
     enabled: !!isPrivileged,
-    refetchInterval: 15000,
+    refetchInterval: 5000,
   });
 
   // 3. Fetch quarantined pending reports
@@ -99,7 +99,7 @@ export default function ModeratorWorkspacePage({ initialTab = null }) {
     queryKey: ['pendingReports', slug],
     queryFn: () => api.get(`/api/o/${slug}/reports/found?status=pending_review`),
     enabled: !!isPrivileged,
-    refetchInterval: 15000,
+    refetchInterval: 5000,
   });
 
   const claims = claimsData?.claims || [];
@@ -146,7 +146,12 @@ export default function ModeratorWorkspacePage({ initialTab = null }) {
       });
       setHandoverResult(res);
       setHandoverCode('');
-      queryClient.invalidateQueries(['deskClaims', slug]);
+      await queryClient.invalidateQueries({ queryKey: ['deskClaims'] });
+      await queryClient.invalidateQueries({ queryKey: ['deskClaimsQueue'] });
+      await queryClient.invalidateQueries({ queryKey: ['myClaims'] });
+      await queryClient.invalidateQueries({ queryKey: ['foundFeed'] });
+      await queryClient.invalidateQueries({ queryKey: ['foundFeedFiltered'] });
+      await queryClient.invalidateQueries({ queryKey: ['notifications'] });
     } catch (err) {
       setHandoverError(err.message || 'Invalid handover verification code.');
     } finally {
@@ -166,7 +171,12 @@ export default function ModeratorWorkspacePage({ initialTab = null }) {
       setModalAction(null);
       setCustomNote('');
       await refetchClaims();
-      queryClient.invalidateQueries(['myClaims', slug]);
+      await queryClient.invalidateQueries({ queryKey: ['deskClaims'] });
+      await queryClient.invalidateQueries({ queryKey: ['deskClaimsQueue'] });
+      await queryClient.invalidateQueries({ queryKey: ['myClaims'] });
+      await queryClient.invalidateQueries({ queryKey: ['foundFeed'] });
+      await queryClient.invalidateQueries({ queryKey: ['foundFeedFiltered'] });
+      await queryClient.invalidateQueries({ queryKey: ['notifications'] });
     } catch (err) {
       setActionError(err.message || 'Failed to update claim.');
     } finally {
@@ -181,7 +191,10 @@ export default function ModeratorWorkspacePage({ initialTab = null }) {
     try {
       await api.post(`/api/o/${slug}/reports/${reportId}/review`, { action });
       await refetchPendingReports();
-      queryClient.invalidateQueries(['foundFeedFiltered', slug]);
+      await queryClient.invalidateQueries({ queryKey: ['foundFeed'] });
+      await queryClient.invalidateQueries({ queryKey: ['foundFeedFiltered'] });
+      await queryClient.invalidateQueries({ queryKey: ['reviewQueue'] });
+      await queryClient.invalidateQueries({ queryKey: ['pendingReports'] });
     } catch (err) {
       setActionError(err.message || 'Failed to review intake report.');
     } finally {

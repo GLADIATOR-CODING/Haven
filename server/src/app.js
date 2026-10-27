@@ -25,7 +25,7 @@ app.use(helmet());
 // 3. CORS configuration (allowing credentials for cookies & multiple origins)
 const allowedOrigins = (env.CLIENT_URL || '')
   .split(',')
-  .map((url) => url.trim())
+  .map((url) => url.trim().replace(/\/+$/, ''))
   .filter(Boolean);
 
 app.use(

@@ -61,7 +61,7 @@ export default function Navbar() {
     queryKey: ['notifications', activeSlug],
     queryFn: () => api.get(`/api/o/${activeSlug}/notifications`),
     enabled: !!user && !!activeSlug,
-    refetchInterval: 30000,
+    refetchInterval: 6000,
   });
 
   const unreadCount = notifData?.unreadCount || 0;
@@ -326,7 +326,7 @@ export default function Navbar() {
                 <span>Home</span>
               </Link>
               <Link
-                to="/join"
+                to={user ? '/join' : '/login?redirect=/join'}
                 className={`transition-colors flex items-center gap-1.5 ${
                   currentPath.startsWith('/join')
                     ? 'text-white font-bold'
@@ -389,7 +389,7 @@ export default function Navbar() {
             </div>
           ) : (
             <Link
-              to="/orgs/new"
+              to={user ? '/orgs/new' : '/login?redirect=/orgs/new'}
               className={`flex items-center gap-1.5 rounded-full bg-white hover:bg-neutral-200 text-black font-bold transition-all shadow-md whitespace-nowrap ${
                 isLanding ? 'px-3 sm:px-3.5 py-1 sm:py-1.5 text-xs' : 'px-3 sm:px-4 py-1.5 text-xs'
               }`}

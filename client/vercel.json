@@ -3,7 +3,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://haven-api.onrender.com/api/:path*"
+      "destination": "https://haven-7rqt.onrender.com/api/:path*"
     },
     {
       "source": "/(.*)",

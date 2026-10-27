@@ -49,6 +49,7 @@ export default function ActivityPage() {
     queryKey: ['myClaims', slug],
     queryFn: () => api.get(`/api/o/${slug}/claims/mine`),
     enabled: !!orgData,
+    refetchInterval: 4000,
   });
 
   const [copiedClaimCode, setCopiedClaimCode] = useState(null);
@@ -92,7 +93,7 @@ export default function ActivityPage() {
   const handleDismissMatch = async (matchId) => {
     try {
       await api.post(`/api/o/${slug}/reports/matches/${matchId}/dismiss`);
-      queryClient.invalidateQueries(['reportMatches', slug, selectedReportForMatches?.id]);
+      queryClient.invalidateQueries({ queryKey: ['reportMatches', slug, selectedReportForMatches?.id] });
     } catch (err) {
       console.error('Dismiss match failed', err);
     }
