@@ -15,7 +15,7 @@
   <img src="https://img.shields.io/badge/Database-MongoDB%20Mongoose-47A248?style=for-the-badge&logo=mongodb&logoColor=white" alt="MongoDB" />
   <img src="https://img.shields.io/badge/EXIF%20Leak-0%20Bytes%20(Dual--Layer)-10B981?style=for-the-badge&logo=shield&logoColor=white" alt="Zero EXIF Leak" />
   <img src="https://img.shields.io/badge/Intake%20Time-~22s%20(Under%2045s)-F59E0B?style=for-the-badge&logo=speedtest&logoColor=white" alt="Under 45s Intake" />
-  <a href="https://drive.google.com/file/d/16UjlZcZgZ0riI4foVUe4o1kZBCE4Xb9y/view?usp=drive_link" target="_blank" rel="noopener noreferrer"><img src="https://img.shields.io/badge/Demo%20Video-Demo%20Mode%20Only-4285F4?style=for-the-badge&logo=googledrive&logoColor=white" alt="Demo Video (Demo Mode)" /></a>
+  <a href="https://www.loom.com/share/5ce54a402509469b8e3014c5246f5223" target="_blank" rel="noopener noreferrer"><img src="https://img.shields.io/badge/Walkthrough%20Video-Loom%20(Primary)-625DF5?style=for-the-badge&logo=loom&logoColor=white" alt="Full Walkthrough Video (Loom)" /></a>
 </p>
 
 ---
@@ -62,7 +62,32 @@ Physical spaces—universities, tech campuses, hostels, airports, and stadiums�
 
 ## 🎬 Demo Video & Walkthrough
 
-> 🎥 **Evaluator Note:** The video linked below is recorded **specifically and exclusively in Demo Mode** to demonstrate sub-45s item intake, blind verification, and the physical desk handover terminal. A second video covering the complete authenticated lifecycle (user registration, signing in, personal accounts, and workspace onboarding) is currently being recorded and will be added soon.
+### 🌟 1. Primary Full Walkthrough (With Authentication & Sign-In) — *Featured*
+
+> 🎥 **Complete Walkthrough:** Watch the full end-to-end workflow demonstrating Haven with **real user authentication (sign-in / sign-up), profile management, multi-tenant workspace joining & creation, sub-45s intake, zero-leak EXIF scrubbing, HMAC blind challenge verification, and physical desk OTP handover.**
+
+<p align="center">
+  <a href="https://www.loom.com/share/5ce54a402509469b8e3014c5246f5223" target="_blank" rel="noopener noreferrer">
+    <img src="https://img.shields.io/badge/▶%20Watch%20Full%20Walkthrough-Loom%20(Recommended)-625DF5?style=for-the-badge&logo=loom&logoColor=white" alt="Watch Full Walkthrough on Loom" />
+  </a>
+</p>
+
+<div align="center">
+  <a href="https://www.loom.com/share/5ce54a402509469b8e3014c5246f5223" target="_blank" rel="noopener noreferrer">
+    <img src="./assets/haven-banner.svg" alt="Haven Full Walkthrough on Loom (Click to Watch)" width="100%" style="border-radius: 8px; border: 1px solid #625DF5; max-width: 800px;" />
+  </a>
+  <p>
+    🚀 <b>Primary Video Link (Loom):</b> <a href="https://www.loom.com/share/5ce54a402509469b8e3014c5246f5223" target="_blank" rel="noopener noreferrer"><code>https://www.loom.com/share/5ce54a402509469b8e3014c5246f5223</code></a>
+  </p>
+</div>
+
+<br />
+
+---
+
+### 🟢 2. Evaluator Demo-Mode-Only Walkthrough
+
+> ℹ️ **Demo Mode Note:** This supplemental recording is run **specifically and exclusively in Demo Mode** to demonstrate the 1-click evaluator role switcher (`Member` ↔ `Moderator` ↔ `Admin`) for fast testing without requiring manual account registration.
 
 <p align="center">
   <a href="https://drive.google.com/file/d/16UjlZcZgZ0riI4foVUe4o1kZBCE4Xb9y/view?usp=drive_link" target="_blank" rel="noopener noreferrer">
@@ -70,21 +95,19 @@ Physical spaces—universities, tech campuses, hostels, airports, and stadiums�
   </a>
 </p>
 
-<div align="center">
-  <a href="https://drive.google.com/file/d/16UjlZcZgZ0riI4foVUe4o1kZBCE4Xb9y/view?usp=drive_link" target="_blank" rel="noopener noreferrer">
-    <img src="./assets/haven-banner.svg" alt="Haven Demo Mode Video Walkthrough (Click to Watch on Google Drive)" width="100%" style="border-radius: 8px; border: 1px solid #334155; max-width: 800px;" />
-  </a>
-  <p>
-    📺 <b>Demo Video (Demo Mode Only):</b> <a href="https://drive.google.com/file/d/16UjlZcZgZ0riI4foVUe4o1kZBCE4Xb9y/view?usp=drive_link" target="_blank" rel="noopener noreferrer"><code>https://drive.google.com/file/d/16UjlZcZgZ0riI4foVUe4o1kZBCE4Xb9y/view?usp=drive_link</code></a>
-  </p>
-</div>
+<p align="center">
+  📁 <b>Google Drive Link:</b> <a href="https://drive.google.com/file/d/16UjlZcZgZ0riI4foVUe4o1kZBCE4Xb9y/view?usp=drive_link" target="_blank" rel="noopener noreferrer"><code>https://drive.google.com/file/d/16UjlZcZgZ0riI4foVUe4o1kZBCE4Xb9y/view?usp=drive_link</code></a><br />
+  <sub><i>(Tip: If Google Drive's in-browser streaming is processing, click the blue <b>Download</b> button on Drive to play directly.)</i></sub>
+</p>
 
 <br />
 
-| Video | Scope & Mode | Link | Status |
+### 📊 Video Overview
+
+| Video | Scope & Mode | Link | Priority |
 | :--- | :--- | :---: | :---: |
-| 🎬 **Demo Mode Walkthrough** | **Demo Mode Only** — 1-click evaluator role switching (`Member` ↔ `Moderator` ↔ `Admin`), rapid sub-45s intake, EXIF sanitization, radar matching, HMAC blind claims & OTP desk handover. | [**Watch on Google Drive**](https://drive.google.com/file/d/16UjlZcZgZ0riI4foVUe4o1kZBCE4Xb9y/view?usp=drive_link) | ✅ Available Now |
-| 🔐 **Full Auth & User Lifecycle Walkthrough** | **Authenticated Mode** — User sign up, email sign-in, profile avatar & management, workspace joining/creation, and personalized notifications. | *Recording in progress* | ⏳ Coming Soon |
+| 🌟 **Full Authenticated Walkthrough** | **Real User Workflow** — User sign-up, sign-in, profile management, multi-tenant workspace onboarding, intake, claim matching, and desk handover. | [**Watch on Loom**](https://www.loom.com/share/5ce54a402509469b8e3014c5246f5223) | 🥇 **Primary (Recommended)** |
+| 🟢 **Evaluator Demo Mode Walkthrough** | **Demo Mode Only** — 1-click evaluator role switching (`Alex` ↔ `Desk Mod` ↔ `Admin HQ`), rapid form intake, and state machine verification without signing in. | [**Watch on Google Drive**](https://drive.google.com/file/d/16UjlZcZgZ0riI4foVUe4o1kZBCE4Xb9y/view?usp=drive_link) | 🥈 Supplemental |
 
 ---
 
