@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../api/client';
+import { useAuth } from '../context/AuthContext';
 import {
   Search,
   MapPin,
@@ -51,6 +52,7 @@ function getCategoryIcon(key) {
 
 export default function FoundFeedPage() {
   const { slug } = useParams();
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedLocation, setSelectedLocation] = useState(null);
@@ -86,7 +88,7 @@ export default function FoundFeedPage() {
   const { data: myClaimsData } = useQuery({
     queryKey: ['myClaims', slug],
     queryFn: () => api.get(`/api/o/${slug}/claims/mine`),
-    enabled: !!orgData,
+    enabled: !!orgData && !!user,
   });
 
   const reports = feedData?.reports || [];
@@ -253,6 +255,13 @@ export default function FoundFeedPage() {
             const Icon = getCategoryIcon(item.category);
             const isMasked = item.photoMasked;
             const locName = locations.find((l) => l.key === item.location)?.label || item.location;
+            const userClaim = myClaims.find(
+              (c) =>
+                c.foundItem?.id === item.id ||
+                c.foundItem?._id === item.id ||
+                c.foundId === item.id ||
+                c.foundItemId === item.id
+            );
 
             return (
               <div
